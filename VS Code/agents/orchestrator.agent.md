@@ -23,6 +23,9 @@ handoffs:
   - label: Plan only
     agent: architect-planner
     prompt: Run the planning phase only for this task.
+  - label: UI/UX Review only
+    agent: ui-ux-sentinel
+    prompt: Run a UI/UX design review on the current UI code.
   - label: Review only
     agent: code-review-sentinel
     prompt: Run the review phase only on current code.
@@ -46,7 +49,7 @@ INPUT
 [STAGE 0] Intake & Classification
   │
   ▼
-[STAGE 1] Assumption Review          ← optional, skip for trivial tasks
+[STAGE 1] Assumption Review          ← skip for trivial tasks
   │
   ▼
 [STAGE 2] Architecture & Planning    ← skip if spec already exists
@@ -58,11 +61,14 @@ INPUT
 [STAGE 4] Implementation             ← language-specific implementer agent
   │
   ▼
+[STAGE 4.5] UI/UX Review             ← only when UI components/pages were modified
+  │
+  ▼
 [STAGE 5a] Backend Tests   [STAGE 5b] Frontend Tests   ← run in parallel if both needed
   │                                │
   └────────────┬───────────────────┘
                ▼
-[STAGE 6] Documentation              ← optional, skip for non-public APIs
+[STAGE 6] Documentation              ← skip for bug fixes and trivial tasks
                │
                ▼
 [STAGE 7] Code Review (Sentinel)
@@ -201,7 +207,46 @@ Use classification to decide which stages to skip. Document the classification a
 
 ---
 
-### STAGE 5 — Testing (parallel tracks)
+### STAGE 4.5 — UI/UX Review (conditional)
+
+**Skip when:** No UI components, pages, or client-side views were created or modified. Pure backend, API-only, or infrastructure changes skip this stage entirely.
+
+**Run when:** Any of the following are true:
+- A new component, page, layout, or view was created
+- An existing component or page was visually modified
+- Styling classes were added or changed on any element
+- The task type is `NEW_PROJECT` or `NEW_FEATURE` with a frontend scope
+
+**Invoke:** `ui-ux-sentinel`
+
+**Pass in:**
+- Full list of UI files created or modified in Stage 4 (`.tsx`, `.jsx`, `.svelte`, `.vue`, `.html`)
+- The framework and design system in use (e.g. "Next.js 15 + Skeleton UI + Tailwind 4")
+- The Skeleton theme in use (e.g. `data-theme="cerberus"`) if applicable
+- Any design or brand guidelines from the spec or architecture doc
+- Instruction: "Review all files for hardcoded colors and theme token violations (Pillar 1) first — these are the highest-priority findings. Then review all six pillars. Report every Blocker and Risk."
+
+**Gate — PASS conditions (ALL must be true):**
+- Zero Blocker findings
+- Theme Compliance Score is `Pass` or `Conditional` (≤ 3 Risk-level token violations)
+- UX Quality Score ≥ 3/5 on every pillar
+- Zero accessibility Blockers (missing ARIA, keyboard traps, no focus styles)
+
+**Gate — FIX LOOP (on failure):**
+
+1. Extract all Blocker and Risk findings from the review
+2. Route back to the correct implementer:
+   - If the project uses Skeleton UI → `nextjs-skeleton-expert`
+   - Otherwise → `typescript-implementer`
+3. Pass the full findings table with instruction: "Fix every Blocker and Risk finding from the UI/UX review. For each fix, note the finding number it resolves. Do not introduce new hardcoded colors while fixing other issues."
+4. Re-run Stage 4.5
+5. Track iteration count
+
+**Max iterations:** 2 fix loops. After 2 failed iterations, escalate to user with:
+- The persistent findings table
+- A specific question for each unresolved finding (e.g. "Finding #3 requires an empty state component — should I create a shared `EmptyState` component or an inline message?")
+
+---
 
 Run test agents based on what was implemented. These can be run in parallel if both are needed — invoke them as simultaneous sub-tasks.
 
@@ -316,17 +361,65 @@ Track each stage as:
 - `FAIL` — Gate failed, fix loop active
 - `ESCALATE` — Exceeded retry limit, needs human
 
-Example todo items:
+**Add a UI scope flag to intake:**
+
+During Stage 0 classification, also determine:
+- `HAS_UI: true/false` — Does this task touch any frontend components, pages, or views?
+- `UI_FRAMEWORK: [Skeleton+Next.js / React / Vue / SvelteKit / other]` — Which framework and design system?
+- `DESIGN_SYSTEM: [Skeleton / plain Tailwind / custom tokens / none]` — Is a token-based design system in use?
+
+These flags determine whether Stage 4.5 runs and which variant of the UI/UX review to request.
+
+Example todo items (updated):
 ```
-[IN_PROGRESS] STAGE 0: Intake — classify task type and complexity
+[IN_PROGRESS] STAGE 0: Intake — classify task type, complexity, UI scope
 [PASS]        STAGE 1: Assumption Review — 2 Risks found, carried forward
 [PASS]        STAGE 2: Architecture — 5 tasks generated
 [SKIP]        STAGE 3: PBI Clarification — spec already precise
-[IN_PROGRESS] STAGE 4: Implementation — typescript-implementer
+[IN_PROGRESS] STAGE 4: Implementation — nextjs-skeleton-expert
+[TODO]        STAGE 4.5: UI/UX Review — ui-ux-sentinel (HAS_UI=true)
 [TODO]        STAGE 5a: Backend Tests
 [TODO]        STAGE 5b: Frontend Tests
 [TODO]        STAGE 6: Documentation
 [TODO]        STAGE 7: Code Review
+```
+
+### Pipeline Progress File (mandatory)
+
+In addition to the `todo` list, maintain an append-only pipeline progress file so the work can be resumed across sessions:
+
+`agent-progress/pipeline-[task-slug].md`
+
+Rules:
+- Create `agent-progress/` if it does not exist.
+- Create the file during **Stage 0** (Intake) and append after **every stage gate** (PASS / SKIP / BLOCKED / FAIL / ESCALATE).
+- Do not overwrite prior entries. Append a new section for each stage transition and each fix-loop iteration.
+- Include the active stage, gate result, agents invoked, files affected, and any blockers/open questions.
+
+Use this exact section template for each append:
+
+```markdown
+## orchestrator — [ISO timestamp]
+
+**Task:** [one-line description]
+**Pipeline Status:** [current stage + PASS/SKIP/etc.]
+**Active Stage:** [Stage N]
+**Iteration (if fix loop):** [e.g. Stage 4 Iteration 2/3]
+
+### Actions Taken
+- [what you did / what agents you invoked]
+
+### Files Created or Modified
+- `path/to/file` — [what changed]
+
+### Outcome
+[what changed in pipeline state, what passed/failed, what artifact is now available]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next stage or escalation question]
 ```
 
 ---
@@ -422,7 +515,14 @@ When the pipeline completes (all gates pass), produce a final report:
 - Tests added: [count and paths]
 - Docs added: [count and symbols documented]
 
-### Review Score
+### UI/UX Review Score (if applicable)
+- Theme Compliance: [Pass / Conditional / Fail / N/A]
+- Visual Hierarchy: [1-5 / N/A]
+- Accessibility: [1-5 / N/A]
+- Feedback & States: [1-5 / N/A]
+- Consistency: [1-5 / N/A]
+
+### Code Review Score
 - Completeness: [X/5]
 - Correctness: [X/5]
 - Conciseness: [X/5]
@@ -436,6 +536,8 @@ When the pipeline completes (all gates pass), produce a final report:
 [e.g. "Run E2E tests against staging", "Deploy to preview", "Update API docs"]
 ```
 
+Before producing the final report, append a final completion entry to `agent-progress/pipeline-[task-slug].md`.
+
 ---
 
 ## Critical Rules
@@ -444,7 +546,8 @@ When the pipeline completes (all gates pass), produce a final report:
 - **Never skip a quality gate silently.** Every skip must be logged with a reason.
 - **Never proceed past a Blocker.** Surface it to the user immediately.
 - **Always pass a full context package.** Agents that lack context produce worse output and require more fix loops.
-- **Fix loops are bounded.** 3 iterations maximum per stage, then escalate.
+- **Fix loops are bounded.** 3 iterations maximum per stage (2 for Stage 4.5), then escalate.
 - **One implementer at a time on the same files.** Parallel test agents are fine; parallel implementers on shared files are not.
 - **The spec is the source of truth.** If implementation and spec disagree, flag it — do not silently resolve in favor of either.
 - **Carry risks forward.** A Risk flagged in Stage 1 that was not blocked must appear in context packages for Stages 4, 5, and 7.
+- **UI/UX gate runs before tests.** Stage 4.5 must pass before tests are written — fixing theme violations and missing states after tests exist causes test churn. Always gate in this order: implement → UI/UX review → fix → test.

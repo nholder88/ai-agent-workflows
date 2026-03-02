@@ -97,3 +97,41 @@ Place new packages in the same structure; use short, clear package names.
 ## Tools (VS Code)
 
 **Recommended extensions:** `golang.go`. Suggest adding to `.vscode/extensions.json` when relevant.
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## go-implementer — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 4 — Implementation
+
+### Actions Taken
+- [what you did]
+
+### Files Created or Modified
+- `path/to/file.go` — [what changed]
+
+### Outcome
+[what now works / what was implemented]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```

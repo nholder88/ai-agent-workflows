@@ -97,3 +97,261 @@ Place new types in the same namespaces and folders; match existing naming (Pasca
 ## Tools (VS Code)
 
 **Recommended extensions:** `ms-dotnettools.csharp`, `k--kato.docomment`, `formulahendry.dotnet-test-explorer`. Suggest adding to `.vscode/extensions.json` when relevant.
+
+---
+
+## Production Standards (Mandatory)
+
+Every backend implementation must comply with the following. Read `docs/backend-production-standards.md` if present. These are enforced by `code-review-sentinel` as Critical Issues.
+
+### 1. Structured Logging with Serilog
+
+**Never use `Console.WriteLine` or `Debug.WriteLine`.** Use Serilog with JSON output in production.
+
+```csharp
+// Program.cs
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Is(Enum.Parse<LogEventLevel>(
+        builder.Configuration["LOG_LEVEL"] ?? "Information"))
+    .Enrich.FromLogContext()
+    .Enrich.WithCorrelationId()  // Serilog.Enrichers.CorrelationId
+    .WriteTo.Console(new JsonFormatter())
+    .CreateLogger();
+
+builder.Host.UseSerilog();
+
+// Usage — inject ILogger<T>, never use Log.Logger directly in services
+public class OrderService(ILogger<OrderService> logger)
+{
+    public async Task<Order> CreateOrderAsync(CreateOrderDto dto)
+    {
+        logger.LogInformation("Creating order {@OrderId} for user {@UserId}",
+            dto.Id, dto.UserId);
+        // ...
+    }
+}
+```
+
+Never log passwords, tokens, or PII. Use `{@Dto}` destructuring only on safe objects.
+
+### 2. Database Connection Management (EF Core)
+
+```csharp
+// Program.cs
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseNpgsql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        npgsqlOptions =>
+        {
+            npgsqlOptions.EnableRetryOnFailure(
+                maxRetryCount: 10,
+                maxRetryDelay: TimeSpan.FromSeconds(30),
+                errorCodesToAdd: null);
+            npgsqlOptions.CommandTimeout(
+                int.Parse(builder.Configuration["DB_STATEMENT_TIMEOUT"] ?? "30"));
+        })
+    .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)); // default for read-heavy
+
+// Verify connection on startup with retry
+public class DatabaseStartupCheck(AppDbContext db, ILogger<DatabaseStartupCheck> logger)
+    : IHostedService
+{
+    public async Task StartAsync(CancellationToken cancellationToken)
+    {
+        for (int attempt = 1; attempt <= 10; attempt++)
+        {
+            try
+            {
+                await db.Database.ExecuteSqlRawAsync("SELECT 1", cancellationToken);
+                logger.LogInformation("Database connection verified");
+                return;
+            }
+            catch (Exception ex)
+            {
+                if (attempt == 10) throw;
+                var delay = TimeSpan.FromMilliseconds(
+                    Math.Min(500 * Math.Pow(2, attempt - 1), 30_000));
+                logger.LogWarning(ex,
+                    "DB connection attempt {Attempt}/10 failed. Retrying in {Delay}ms",
+                    attempt, delay.TotalMilliseconds);
+                await Task.Delay(delay, cancellationToken);
+            }
+        }
+    }
+    public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+}
+```
+
+### 3. Health & Readiness Endpoints
+
+Use `Microsoft.Extensions.Diagnostics.HealthChecks` and `AspNetCore.HealthChecks.*`.
+
+```csharp
+// Program.cs
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("database")
+    .AddRedis(builder.Configuration["REDIS_URL"] ?? "", "cache"); // if Redis used
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => false, // liveness: no dep checks, always 200 if process alive
+    ResponseWriter = WriteMinimalResponse,
+});
+
+app.MapHealthChecks("/ready", new HealthCheckOptions
+{
+    ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse, // full dep status
+});
+
+// Register before auth middleware:
+app.UseHealthChecks("/health");
+app.UseHealthChecks("/ready");
+app.UseAuthentication();
+app.UseAuthorization();
+```
+
+### 4. Retry Logic with Polly
+
+Use Polly via `Microsoft.Extensions.Http.Polly`. Do not write custom retry loops.
+
+```csharp
+// Register HttpClient with Polly policy
+builder.Services.AddHttpClient<IPaymentService, PaymentService>()
+    .AddPolicyHandler(HttpPolicyExtensions
+        .HandleTransientHttpError()  // 5xx, network errors
+        .OrResult(r => r.StatusCode == HttpStatusCode.TooManyRequests)
+        .WaitAndRetryAsync(
+            retryCount: 3,
+            sleepDurationProvider: attempt =>
+                TimeSpan.FromMilliseconds(200 * Math.Pow(2, attempt - 1))
+                + TimeSpan.FromMilliseconds(Random.Shared.Next(0, 100)),
+            onRetry: (outcome, delay, attempt, _) =>
+                Log.Warning("Retry {Attempt}/3 after {Delay}ms: {Error}",
+                    attempt, delay.TotalMilliseconds, outcome.Exception?.Message)));
+```
+
+### 5. Database Seeding
+
+```csharp
+// db/Seeds/DataSeeder.cs
+public class DataSeeder(AppDbContext db, IHostEnvironment env, ILogger<DataSeeder> logger)
+{
+    private static readonly HashSet<string> AllowedEnvs =
+        ["Development", "Staging", "Test"];
+
+    public async Task SeedAsync()
+    {
+        if (!AllowedEnvs.Contains(env.EnvironmentName))
+        {
+            logger.LogWarning("Seeding skipped — not allowed in {Env}", env.EnvironmentName);
+            return;
+        }
+        await SeedReferenceDataAsync();
+        if (env.IsDevelopment() || env.EnvironmentName == "Staging")
+            await SeedDemoDataAsync();
+    }
+
+    private async Task SeedDemoDataAsync()
+    {
+        // Always upsert — never unconditional add
+        if (!await db.Users.AnyAsync(u => u.Email == "demo@example.com"))
+        {
+            db.Users.Add(new User { Email = "demo@example.com", Name = "Demo User" });
+            await db.SaveChangesAsync();
+        }
+    }
+}
+```
+
+### 6. Config Validation at Startup
+
+```csharp
+// Configuration/AppSettings.cs
+public class AppSettings
+{
+    public required string DatabaseConnectionString { get; init; }
+    public required string JwtSecret { get; init; }
+    public string LogLevel { get; init; } = "Information";
+}
+
+// Program.cs — validate on startup, fail fast
+builder.Services.AddOptions<AppSettings>()
+    .Bind(builder.Configuration)
+    .ValidateDataAnnotations()
+    .ValidateOnStart();  // throw at startup, not first use
+```
+
+### 7. Graceful Shutdown
+
+ASP.NET Core handles `SIGTERM` natively when `UseShutdownTimeout` is configured. Ensure it is set.
+
+```csharp
+// Program.cs
+builder.Services.Configure<HostOptions>(options =>
+{
+    options.ShutdownTimeout = TimeSpan.FromSeconds(10);
+});
+
+// IHostedService or IAsyncDisposable for cleanup
+public class DatabaseStartupCheck : IHostedService, IAsyncDisposable
+{
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        // Called on SIGTERM — EF Core disposes DbContext automatically via DI
+        return Task.CompletedTask;
+    }
+    public async ValueTask DisposeAsync() => await db.DisposeAsync();
+}
+```
+
+---
+
+## Quality Checklist — Production Standards
+
+- [ ] No `Console.WriteLine` or `Debug.Print` in `src/` — use ILogger<T>
+- [ ] EF Core configured with `EnableRetryOnFailure` and explicit command timeout
+- [ ] DB connection verified on startup with retry before accepting traffic
+- [ ] `/health` (liveness) and `/ready` (readiness with dep checks) both registered
+- [ ] HttpClient dependencies use Polly retry policy — no hand-rolled loops
+- [ ] Seed scripts environment-gated; all data operations idempotent
+- [ ] `AppSettings` validated at startup with `ValidateOnStart()`
+- [ ] `ShutdownTimeout` configured; graceful drain on SIGTERM
+- [ ] No hardcoded connection strings or secrets in source
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## csharp-implementer — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 4 — Implementation
+
+### Actions Taken
+- [what you did]
+
+### Files Created or Modified
+- `path/to/file.cs` — [what changed]
+
+### Outcome
+[what now works / what was implemented]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```

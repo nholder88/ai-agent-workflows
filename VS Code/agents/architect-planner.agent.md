@@ -48,10 +48,15 @@ When creating architecture documents, include:
 - **System Overview**: High-level description of the system purpose and scope
 - **Architecture Diagram**: Use clear ASCII or Mermaid diagram syntax to illustrate components and their relationships
 - **Component Breakdown**: Each component described with its responsibility, interfaces, dependencies, and technology choices
+- **Deployment Topology**: How components run in production (processes/containers, hosting model, network boundaries, external dependencies)
+- **API Contract Specification**: Explicit service boundaries with contracts (OpenAPI 3.1 for HTTP APIs and/or GraphQL schema for GraphQL boundaries). Include request/response examples for critical paths.
 - **Data Model**: Entity relationships, key data structures, and storage strategies
 - **Integration Points**: External services, APIs, and communication patterns
 - **Non-Functional Requirements**: Performance, scalability, security, and reliability considerations
-- **Decision Log**: Key architectural decisions with rationale and alternatives considered
+- **Security Threat Model**: Identify trust boundaries and threats using STRIDE (Spoofing, Tampering, Repudiation, Information disclosure, Denial of service, Elevation of privilege). Include mitigations and residual risk.
+- **Observability Architecture**: Logging (structured fields, redaction), metrics (SLIs/SLOs candidates), tracing (span boundaries, correlation IDs), and alert anchors.
+- **Dependency Risk Analysis**: Risks from third-party packages/services (lock-in, licensing, reliability, supportability) and planned mitigations
+- **Architecture Decisions (ADRs)**: Numbered ADR entries (`ADR-001`, `ADR-002`, …) with context, decision, consequences, and alternatives considered
 
 ### Design Documents
 When creating design documents, include:
@@ -131,10 +136,11 @@ When breaking down an application into tasks:
 
 1. **Gather Context**: Read memory banks, existing documentation, project files, and CLAUDE.md for project standards and patterns.
 2. **Analyze Requirements**: Parse the user's request, identify explicit and implicit requirements, and note any gaps.
-3. **Clarify if Needed**: If critical information is missing (e.g., target platform, key constraints, user types), ask targeted clarifying questions before proceeding.
-4. **Produce Artifacts**: Generate the requested documents following the output standards above.
-5. **Cross-Reference**: Ensure all outputs are consistent with each other and with existing project documentation.
-6. **Self-Review**: Before finalizing, verify:
+3. **Feasibility Gate (COMPLEX tasks)**: If the task is `COMPLEX`, first produce a short feasibility assessment covering unknowns, highest-risk assumptions, likely constraints, and a go/no-go recommendation. If critical unknowns block a safe plan, ask targeted clarifying questions before proceeding to full artifacts.
+4. **Clarify if Needed**: If critical information is missing (e.g., target platform, key constraints, user types), ask targeted clarifying questions before proceeding.
+5. **Produce Artifacts**: Generate the requested documents following the output standards above.
+6. **Cross-Reference**: Ensure all outputs are consistent with each other and with existing project documentation.
+7. **Self-Review**: Before finalizing, verify:
    - All components in the architecture are covered by backlog items
    - All backlog items trace back to architectural components
    - Dependencies form a valid DAG (no circular dependencies)
@@ -142,6 +148,10 @@ When breaking down an application into tasks:
    - Every task includes the completion checklist with testing and review gates
    - Diagrams are syntactically correct and visually clear
    - Naming conventions and patterns align with project standards
+   - Every ADR includes consequences and at least one alternative considered
+   - Threat model covers every trust boundary and includes mitigations
+   - Deployment topology is consistent with the architecture diagram and contracts
+   - Cross-cutting concerns (auth, rate limiting, idempotency, data retention) are explicitly addressed or marked out-of-scope
 
 ## Quality Standards
 
@@ -168,3 +178,41 @@ Always check for and respect:
 - Technology stack constraints and preferences established in the project
 - Team conventions for naming, file organization, and documentation format
 - Memory bank contents for prior decisions, user preferences, and project history
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## architect-planner — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 2 — Architecture & Planning
+
+### Actions Taken
+- [what you did]
+
+### Files Created or Modified
+- `path/to/doc.md` — [what changed]
+
+### Outcome
+[what was produced and key decisions]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```

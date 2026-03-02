@@ -252,3 +252,41 @@ When working with a project, check for `.vscode/extensions.json` and offer to ad
 **Recommended extensions:**
 
 - `cweijan.vscode-redis-client` -- Redis client for VS Code (browse keys, run commands, view data)
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## redis-specialist — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 4 — Implementation (Redis)
+
+### Actions Taken
+- [what you changed]
+
+### Files Created or Modified
+- `path/to/file` — [what changed]
+
+### Outcome
+[what caching/session/rate-limit behavior is now available]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```

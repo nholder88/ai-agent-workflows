@@ -101,3 +101,41 @@ Place new files in the same structure; match existing naming (e.g. `kebab-case.t
 ## Tools (VS Code)
 
 **Recommended extensions:** `dbaeumer.vscode-eslint`, `esbenp.prettier-vscode`, `bradlc.vscode-tailwindcss` (if Tailwind is used). For tests: `vitest.explorer` or Jest extension. Suggest adding to `.vscode/extensions.json` when setting up.
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## typescript-implementer — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 4 — Implementation
+
+### Actions Taken
+- [what you did]
+
+### Files Created or Modified
+- `path/to/file.ts` — [what changed]
+
+### Outcome
+[what now works / what was implemented]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```

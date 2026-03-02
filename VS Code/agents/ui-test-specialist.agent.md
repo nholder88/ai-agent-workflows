@@ -195,3 +195,42 @@ When setting up tests for a project, check for `.vscode/extensions.json` and off
 
 - `.vscode/tasks.json` — Tasks for `test:unit`, `test:integration`, `report` (framework-agnostic npm scripts)
 - `.vscode/settings.json` — Test runner paths, file associations for `.feature` files
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to:
+
+`agent-progress/[task-slug].md`
+
+Rules:
+- If the `agent-progress/` folder does not exist, create it.
+- If the file already exists, append; do not overwrite prior entries.
+- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
+
+Use this exact section template:
+
+```markdown
+## ui-test-specialist — [ISO timestamp]
+
+**Task:** [one-line description]
+**Status:** Complete | Blocked | Partial
+**Stage (if in pipeline):** Stage 5c — E2E / UI Tests
+
+### Actions Taken
+- [what workflows you covered]
+
+### Files Created or Modified
+- `tests/acceptance/features/...` — [what changed]
+- `tests/acceptance/stepDefinitions/...` — [what changed]
+
+### Outcome
+[test results and coverage notes]
+
+### Blockers / Open Questions
+[items or "None"]
+
+### Suggested Next Step
+[next agent/action]
+```
