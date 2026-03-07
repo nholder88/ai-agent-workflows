@@ -193,7 +193,8 @@ Use classification to decide which stages to skip. Document the classification a
 **If multiple languages are involved**, run implementers sequentially, passing the output of each as context for the next. Never run two implementers on the same files simultaneously.
 
 **Pass in:**
-- The PBI spec from Stage 3 (or the original task if stages were skipped)
+- AC map in scope (AC IDs + concise stage-relevant bullets)
+- Spec/artifact pointers for deep context (only fetch full sections if blocked)
 - Architecture doc (if produced)
 - Any stage 1 risks to watch for during implementation
 - Specific instruction: "Do not mark complete until build passes and you have run the test suite."
@@ -201,7 +202,7 @@ Use classification to decide which stages to skip. Document the classification a
 **Gate:**
 - Build must pass (`npm run build`, `dotnet build`, `cargo build`, etc.)
 - No new linting errors introduced
-- Implementation covers all acceptance criteria from the spec
+- Implementation covers all acceptance criteria in scope (by AC ID mapping)
 
 **On gate failure:** Retry implementation once with the specific failure output. If it fails again, escalate.
 
@@ -258,7 +259,8 @@ Run test agents based on what was implemented. These can be run in parallel if b
 
 **Pass in:**
 - List of files modified in Stage 4
-- The PBI spec (for test scenarios from acceptance criteria)
+- AC IDs in scope + only the test-relevant acceptance bullets
+- Pointer to full spec artifact (optional, on-demand)
 - Instruction: "Cover happy path, all error paths, and all edge cases from the acceptance criteria. Run tests before reporting complete."
 
 **Gate:** All new tests pass. Coverage of acceptance criteria scenarios is complete.
@@ -308,8 +310,8 @@ Run test agents based on what was implemented. These can be run in parallel if b
 **Invoke:** `code-review-sentinel`
 
 **Pass in:**
-- List of all files created or modified during the pipeline
-- The original PBI spec and acceptance criteria
+- Files changed since the last review cycle (plus any high-risk dependencies they touch)
+- Acceptance criteria map (AC IDs + only criteria relevant to changed files)
 - Architecture doc (if produced)
 - CLAUDE.md or project conventions doc path
 - Instruction: "Review against the four pillars: Completeness, Correctness, Conciseness, Readability. Score each 1-5."
@@ -426,7 +428,7 @@ Use this exact section template for each append:
 
 ## Context Package
 
-When invoking each agent, always pass a **context package** — a structured block of information the agent needs to work without asking follow-up questions:
+When invoking each agent, pass a **lean context package**. Include only stage-relevant details and artifact pointers; do not inline full specs/reports unless required to unblock the stage.
 
 ```markdown
 ## Context Package
@@ -435,20 +437,26 @@ When invoking each agent, always pass a **context package** — a structured blo
 **Task Type:** [NEW_FEATURE / BUG_FIX / REFACTOR / etc.]
 **Pipeline Stage:** [Stage N of 7]
 
+**Token Budget:**
+- Target: [e.g. <= 1200 tokens for implementation handoffs]
+- Hard max: [e.g. <= 1800 tokens unless escalated]
+
 **Tech Stack:**
 - Language: [e.g. TypeScript]
 - Framework: [e.g. Next.js 15 + Skeleton UI]
 - Test Runner: [e.g. Vitest]
 - Package Manager: [e.g. pnpm]
 
-**Files Affected So Far:**
+**Files In Scope (Stage-Scoped):**
 - [path/to/file.ts] — [what was done]
 
-**Spec / Acceptance Criteria:**
-[Full PBI spec or relevant AC]
+**Spec / Acceptance Criteria (Compressed):**
+- AC IDs in scope: [AC-1, AC-3]
+- Stage-relevant AC bullets only (max 12 bullets)
+- Artifact pointers: [path/to/spec.md#section, path/to/pbi.md#AC]
 
 **Risks to Watch:**
-[Any risks flagged in Stage 1]
+- [Risk IDs + one-line summary]
 
 **Project Conventions:**
 [Key conventions from CLAUDE.md or detected patterns]
@@ -545,9 +553,9 @@ Before producing the final report, append a final completion entry to `agent-pro
 - **Never implement code yourself.** Delegate to the appropriate specialist agent.
 - **Never skip a quality gate silently.** Every skip must be logged with a reason.
 - **Never proceed past a Blocker.** Surface it to the user immediately.
-- **Always pass a full context package.** Agents that lack context produce worse output and require more fix loops.
+- **Always pass a lean, stage-scoped context package.** Prefer AC IDs, concise bullets, and artifact pointers over full inlined documents.
 - **Fix loops are bounded.** 3 iterations maximum per stage (2 for Stage 4.5), then escalate.
 - **One implementer at a time on the same files.** Parallel test agents are fine; parallel implementers on shared files are not.
 - **The spec is the source of truth.** If implementation and spec disagree, flag it — do not silently resolve in favor of either.
-- **Carry risks forward.** A Risk flagged in Stage 1 that was not blocked must appear in context packages for Stages 4, 5, and 7.
+- **Carry risks forward.** A Risk flagged in Stage 1 that was not blocked must appear in context packages for Stages 4, 5, and 7 as risk IDs with one-line impact notes.
 - **UI/UX gate runs before tests.** Stage 4.5 must pass before tests are written — fixing theme violations and missing states after tests exist causes test churn. Always gate in this order: implement → UI/UX review → fix → test.
