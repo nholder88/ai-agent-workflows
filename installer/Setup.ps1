@@ -113,11 +113,11 @@ function Copy-AgentsAndTemplates {
     }
 
     return [PSCustomObject]@{
-        target = $TargetName
-        promptsPath = $TargetPromptsPath
-        templatesPath = $templatesTargetPath
-        installedFiles = $installedFiles
-        agentFileCount = (Get-ChildItem -LiteralPath $AgentsSource -File -Recurse | Measure-Object).Count
+        target            = $TargetName
+        promptsPath       = $TargetPromptsPath
+        templatesPath     = $templatesTargetPath
+        installedFiles    = $installedFiles
+        agentFileCount    = (Get-ChildItem -LiteralPath $AgentsSource -File -Recurse | Measure-Object).Count
         templateFileCount = (Get-ChildItem -LiteralPath $TemplatesSource -File -Recurse | Measure-Object).Count
     }
 }
@@ -176,13 +176,13 @@ try {
 
     $manifestPath = Join-Path $installRootFull "install-manifest.json"
     $manifest = [PSCustomObject]@{
-        schemaVersion = 2
+        schemaVersion  = 2
         packageVersion = (Get-PackageVersion -RepoRoot $repoRoot)
         installedAtUtc = [DateTime]::UtcNow.ToString("o")
-        installRoot = $installRootFull
+        installRoot    = $installRootFull
         sourceRepoPath = $repoRoot
-        managedMarker = $managedMarkerPath
-        targets = $targetResults
+        managedMarker  = $managedMarkerPath
+        targets        = $targetResults
     }
 
     $manifest | ConvertTo-Json -Depth 50 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
