@@ -513,7 +513,13 @@ Example todo items (updated):
 
 In addition to the `todo` list, maintain an append-only pipeline progress file so the work can be resumed across sessions:
 
-`agent-progress/pipeline-[task-slug].md`
+`agent-progress/runs/pipeline-[task-slug].md`
+
+Note: In earlier versions, the pipeline progress file lived at `agent-progress/pipeline-[task-slug].md` (without the `runs/` subdirectory). Historical pipeline logs may still be found in that legacy location. When upgrading, update any scripts or automation that reference the old path so they either (a) use the new canonical location `agent-progress/runs/pipeline-[task-slug].md` or (b) check both locations during a transition period.
+Repository convention for `agent-progress/`:
+
+- Durable decision docs stay in `agent-progress/` and are tracked (for example architecture/backlog/remediation/baseline docs).
+- Transient run logs go in `agent-progress/runs/` and are not tracked.
 
 Rules:
 - Create `agent-progress/` if it does not exist.

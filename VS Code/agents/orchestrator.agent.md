@@ -237,7 +237,7 @@ Use classification to decide which stages to skip. Document the classification a
 | ----------------------------------------------------------------------- | ------------------------ |
 | TypeScript, JavaScript, React, Next.js, Vue, SvelteKit, NestJS, Express | `typescript-implementer` |
 | Next.js + Skeleton UI specifically                                      | `nextjs-skeleton-expert` |
-| Angular (any version), Angular Material                                | `angular-implementer`    |
+| Angular (any version), Angular Material                                 | `angular-implementer`    |
 | Python, Django, FastAPI, Flask                                          | `python-implementer`     |
 | C# / .NET, ASP.NET Core, Blazor                                         | `csharp-implementer`     |
 | Rust, Actix, Axum                                                       | `rust-implementer`       |
@@ -547,7 +547,23 @@ Example todo items (updated):
 
 In addition to the `todo` list, maintain an append-only pipeline progress file so the work can be resumed across sessions:
 
-`agent-progress/pipeline-[task-slug].md`
+`agent-progress/runs/pipeline-[task-slug].md`
+
+**Migration note:** In earlier versions, the pipeline progress file lived at\
+`agent-progress/pipeline-[task-slug].md` (without the `runs/` subdirectory).\
+Existing historical logs may still be present in that legacy location. When
+upgrading:
+
+- Update any scripts or automation that referenced `agent-progress/pipeline-[task-slug].md`
+  to use `agent-progress/runs/pipeline-[task-slug].md` instead.
+- Optionally, move existing `agent-progress/pipeline-[task-slug].md` files into
+  `agent-progress/runs/` to keep all run logs in a single place. If you do this,
+  ensure your VCS ignore rules are updated consistently (for example, to avoid
+  accidentally tracking transient logs).
+  Repository convention for `agent-progress/`:
+
+- Durable decision docs stay in `agent-progress/` and are tracked (for example architecture/backlog/remediation/baseline docs).
+- Transient run logs go in `agent-progress/runs/` and are not tracked.
 
 Rules:
 
