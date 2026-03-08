@@ -160,3 +160,9 @@ testing_starter:
     mode: api
     semantics: API smoke/integration suite for health, reporting, and admin endpoints.
     sample_target: test/e2e/api-smoke.e2e-spec.ts
+
+wiki_update:
+  enabled: true
+  contract_ref: Templates/shared/wiki-update-contract.yaml
+  output_mode_default: pr
+  human_approval_default: true

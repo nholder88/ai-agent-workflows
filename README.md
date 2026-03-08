@@ -147,12 +147,14 @@ If you want repeatable, consistent project starts, use the template system in `T
 - `Templates/shared/platform-contracts.yaml`
 - `Templates/shared/capability-parity-matrix.yaml`
 - `Templates/shared/stack-catalog.yaml`
+- `Templates/shared/wiki-update-contract.yaml`
 - `Templates/shared/ci-command-contract.yaml`
 - `Templates/shared/ci-stack-command-matrix.yaml`
 - `Templates/shared/workflows/ci-pr.yaml`
 - `Templates/shared/workflows/ci-main.yaml`
 - `Templates/shared/workflows/cd-release.yaml`
 - `Templates/shared/workflows/cd-deploy.yaml`
+- `VS Code/agents/wiki-update-agent.agent.md`
 - `Templates/scaffold-prompt.md`
 
 This provides a common baseline for env vars, security, logging, data mapping, feature flags, reporting hooks, and admin dashboard integration points so teams stop re-solving the same setup per project.
@@ -174,6 +176,23 @@ Reusable workflow templates resolve stack commands through slot names:
 - CI order is fixed: `install -> lint -> build -> unit_test -> e2e_test`
 - CD templates use `package` and `deploy` slots
 - Backend E2E baseline is API smoke/integration (not browser-only)
+
+### Wiki Update Post-Task Flow
+
+The orchestrator includes a post-review hook for wiki updates after Stage 7 PASS.
+
+- Scope defaults: `github.com` plus GHES allowlist in `Templates/shared/wiki-update-contract.yaml`
+- Trigger default: `stage7_pass`
+- Output mode default: `pr`
+- Approval default: `humanApproval: true`
+- Failure semantics: non-blocking warning + audit (does not fail pipeline)
+
+The `wiki-update-agent` generates user-facing content only:
+
+- Include: functional changes and end-user how-to guidance
+- Exclude: low-level technical internals and refactor-only details
+
+When host is unsupported or the candidate is not documentation-worthy, the wiki flow is skipped with audit metadata.
 
 Run it from the repo root:
 

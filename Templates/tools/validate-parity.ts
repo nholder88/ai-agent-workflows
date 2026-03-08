@@ -8,6 +8,12 @@ import YAML from 'yaml';
 type StackEntry = {
   key: string;
   spec: string;
+  wiki_update?: {
+    enabled?: boolean;
+    contract_ref?: string;
+    output_mode_default?: string;
+    human_approval_default?: boolean;
+  };
 };
 
 type StackCatalog = {
@@ -55,6 +61,38 @@ type TemplateSpec = {
       semantics?: string;
     };
   };
+  wiki_update?: {
+    enabled?: boolean;
+    contract_ref?: string;
+    output_mode_default?: string;
+    human_approval_default?: boolean;
+  };
+};
+
+type WikiUpdateContract = {
+  version?: string;
+  name?: string;
+  policy?: {
+    scope?: {
+      githubDotCom?: boolean;
+      ghesAllowlist?: string[];
+    };
+    trigger?: string;
+    failureMode?: string;
+    outputMode?: string;
+    humanApproval?: boolean;
+  };
+  classification?: {
+    include?: string[];
+    exclude?: string[];
+  };
+};
+
+type WikiDefaults = {
+  enabled: boolean;
+  contractRef: string;
+  outputMode: string;
+  humanApproval: boolean;
 };
 
 type WorkflowTemplate = {
@@ -88,6 +126,23 @@ const CI_WORKFLOW_STEP_ORDER = [
   'unit_test',
   'e2e_test',
 ] as const;
+
+const WIKI_CONTRACT_RELATIVE_PATH =
+  'Templates/shared/wiki-update-contract.yaml';
+const REQUIRED_WIKI_INCLUDE_TAGS = [
+  'user_visible_functional_change',
+  'end_user_how_to',
+] as const;
+const REQUIRED_WIKI_EXCLUDE_TAGS = [
+  'internal_refactor_only',
+  'low_level_framework_details',
+] as const;
+const BASELINE_WIKI_DEFAULTS: WikiDefaults = {
+  enabled: true,
+  contractRef: WIKI_CONTRACT_RELATIVE_PATH,
+  outputMode: 'pr',
+  humanApproval: true,
+};
 
 /**
  * Represents a single parity validation issue with an optional remediation hint.
@@ -795,6 +850,302 @@ export function validateTemplateTestingMetadata(
   return errors;
 }
 
+/**
+ * Validates shared wiki update policy contract existence, shape, and required defaults.
+ */
+export function validateWikiUpdateContract(
+  rootDir: string,
+  contractRelativePath: string
+): {
+  errors: ValidationError[];
+  defaults: WikiDefaults;
+} {
+  const defaults: WikiDefaults = {
+    ...BASELINE_WIKI_DEFAULTS,
+    contractRef: contractRelativePath,
+  };
+  const contractPath = path.join(rootDir, contractRelativePath);
+  const parseResult = safeLoadYaml<WikiUpdateContract>(contractPath);
+
+  if (parseResult.error) {
+    return {
+      errors: [
+        {
+          filePath: contractPath,
+          message: `Wiki update policy contract is missing or malformed at '${contractRelativePath}'.`,
+          hint: `Create a valid YAML file with top-level keys version, name, policy, and classification at ${contractRelativePath}.`,
+        },
+      ],
+      defaults,
+    };
+  }
+
+  const contract = parseResult.value as WikiUpdateContract;
+  const errors: ValidationError[] = [];
+
+  if (!contract || typeof contract !== 'object') {
+    errors.push({
+      filePath: contractPath,
+      message: 'Wiki contract must be a YAML object.',
+      hint: 'Define the contract as a top-level object with version, name, policy, and classification.',
+    });
+    return { errors, defaults };
+  }
+
+  for (const key of ['version', 'name', 'policy', 'classification'] as const) {
+    if (!(key in contract)) {
+      errors.push({
+        filePath: contractPath,
+        message: `Wiki contract is missing required key '${key}'.`,
+        hint: `Add '${key}' to ${path.basename(contractPath)}.`,
+      });
+    }
+  }
+
+  if (contract.name !== 'wiki-update-contract') {
+    errors.push({
+      filePath: contractPath,
+      message: "Wiki contract 'name' must be 'wiki-update-contract'.",
+      hint: "Set name: wiki-update-contract.",
+    });
+  }
+
+  const policy = contract.policy;
+  if (!policy || typeof policy !== 'object') {
+    errors.push({
+      filePath: contractPath,
+      message: "Wiki contract must define a 'policy' object.",
+      hint: 'Add policy with scope, trigger, failureMode, outputMode, and humanApproval.',
+    });
+  } else {
+    const scope = policy.scope;
+    if (!scope || typeof scope !== 'object') {
+      errors.push({
+        filePath: contractPath,
+        message: "Wiki contract policy must define a 'scope' object.",
+        hint: 'Add policy.scope.githubDotCom and policy.scope.ghesAllowlist.',
+      });
+    } else {
+      if (scope.githubDotCom !== true) {
+        errors.push({
+          filePath: contractPath,
+          message:
+            "Wiki contract policy.scope.githubDotCom must be true for the baseline.",
+          hint: 'Set policy.scope.githubDotCom to true.',
+        });
+      }
+      if (!Array.isArray(scope.ghesAllowlist)) {
+        errors.push({
+          filePath: contractPath,
+          message:
+            'Wiki contract policy.scope.ghesAllowlist must be an array (can be empty).',
+          hint: 'Set policy.scope.ghesAllowlist to an array of GHES hostnames.',
+        });
+      }
+    }
+
+    if (policy.trigger !== 'stage7_pass') {
+      errors.push({
+        filePath: contractPath,
+        message: "Wiki contract policy.trigger must be 'stage7_pass'.",
+        hint: 'Set policy.trigger to stage7_pass.',
+      });
+    }
+
+    if (policy.failureMode !== 'non_blocking_warning_audit') {
+      errors.push({
+        filePath: contractPath,
+        message:
+          "Wiki contract policy.failureMode must be 'non_blocking_warning_audit'.",
+        hint: 'Set policy.failureMode to non_blocking_warning_audit.',
+      });
+    }
+
+    if (policy.outputMode !== 'pr') {
+      errors.push({
+        filePath: contractPath,
+        message: "Wiki contract policy.outputMode must be 'pr'.",
+        hint: 'Set policy.outputMode to pr.',
+      });
+    }
+
+    if (policy.humanApproval !== true) {
+      errors.push({
+        filePath: contractPath,
+        message: 'Wiki contract policy.humanApproval must be true.',
+        hint: 'Set policy.humanApproval to true.',
+      });
+    }
+
+    defaults.outputMode =
+      typeof policy.outputMode === 'string' ? policy.outputMode : defaults.outputMode;
+    defaults.humanApproval =
+      typeof policy.humanApproval === 'boolean'
+        ? policy.humanApproval
+        : defaults.humanApproval;
+  }
+
+  const classification = contract.classification;
+  if (!classification || typeof classification !== 'object') {
+    errors.push({
+      filePath: contractPath,
+      message: "Wiki contract must define a 'classification' object.",
+      hint: 'Add classification.include and classification.exclude arrays.',
+    });
+  } else {
+    const include = classification.include;
+    const exclude = classification.exclude;
+    if (!Array.isArray(include)) {
+      errors.push({
+        filePath: contractPath,
+        message: 'Wiki contract classification.include must be an array.',
+        hint: `Include required tags: ${REQUIRED_WIKI_INCLUDE_TAGS.join(', ')}.`,
+      });
+    }
+    if (!Array.isArray(exclude)) {
+      errors.push({
+        filePath: contractPath,
+        message: 'Wiki contract classification.exclude must be an array.',
+        hint: `Include required tags: ${REQUIRED_WIKI_EXCLUDE_TAGS.join(', ')}.`,
+      });
+    }
+
+    if (Array.isArray(include)) {
+      for (const tag of REQUIRED_WIKI_INCLUDE_TAGS) {
+        if (!include.includes(tag)) {
+          errors.push({
+            filePath: contractPath,
+            message: `Wiki contract classification.include is missing '${tag}'.`,
+            hint: `Add '${tag}' to classification.include.`,
+          });
+        }
+      }
+    }
+
+    if (Array.isArray(exclude)) {
+      for (const tag of REQUIRED_WIKI_EXCLUDE_TAGS) {
+        if (!exclude.includes(tag)) {
+          errors.push({
+            filePath: contractPath,
+            message: `Wiki contract classification.exclude is missing '${tag}'.`,
+            hint: `Add '${tag}' to classification.exclude.`,
+          });
+        }
+      }
+    }
+  }
+
+  return { errors, defaults };
+}
+
+/**
+ * Validates wiki_update metadata in stack catalog entries and per-stack template specs.
+ */
+export function validateTemplateWikiUpdateMetadata(
+  rootDir: string,
+  catalog: StackCatalog,
+  expectedDefaults: WikiDefaults,
+  catalogPath: string
+): ValidationError[] {
+  const errors: ValidationError[] = [];
+
+  for (const { entry } of getStackEntries(catalog)) {
+    const expectedContractRef = expectedDefaults.contractRef;
+    const expectedOutputMode = expectedDefaults.outputMode;
+    const expectedApproval = expectedDefaults.humanApproval;
+
+    const catalogWiki = entry.wiki_update;
+    if (!catalogWiki || typeof catalogWiki !== 'object') {
+      errors.push({
+        filePath: catalogPath,
+        message: `Stack '${entry.key}' is missing wiki_update metadata in stack-catalog.yaml.`,
+        hint: `Add wiki_update.enabled, contract_ref, output_mode_default, and human_approval_default for '${entry.key}'.`,
+      });
+    } else {
+      if (catalogWiki.enabled !== expectedDefaults.enabled) {
+        errors.push({
+          filePath: catalogPath,
+          message: `Stack '${entry.key}' has wiki_update.enabled='${String(catalogWiki.enabled)}' but expected '${String(expectedDefaults.enabled)}'.`,
+          hint: `Set stack-catalog wiki_update.enabled for '${entry.key}' to ${String(expectedDefaults.enabled)}.`,
+        });
+      }
+      if (catalogWiki.contract_ref !== expectedContractRef) {
+        errors.push({
+          filePath: catalogPath,
+          message: `Stack '${entry.key}' has wiki_update.contract_ref='${catalogWiki.contract_ref ?? 'undefined'}' but expected '${expectedContractRef}'.`,
+          hint: `Set stack-catalog wiki_update.contract_ref for '${entry.key}' to '${expectedContractRef}'.`,
+        });
+      }
+      if (catalogWiki.output_mode_default !== expectedOutputMode) {
+        errors.push({
+          filePath: catalogPath,
+          message: `Stack '${entry.key}' has wiki_update.output_mode_default='${catalogWiki.output_mode_default ?? 'undefined'}' but expected '${expectedOutputMode}'.`,
+          hint: `Set stack-catalog wiki_update.output_mode_default for '${entry.key}' to '${expectedOutputMode}'.`,
+        });
+      }
+      if (catalogWiki.human_approval_default !== expectedApproval) {
+        errors.push({
+          filePath: catalogPath,
+          message: `Stack '${entry.key}' has wiki_update.human_approval_default='${String(catalogWiki.human_approval_default)}' but expected '${String(expectedApproval)}'.`,
+          hint: `Set stack-catalog wiki_update.human_approval_default for '${entry.key}' to ${String(expectedApproval)}.`,
+        });
+      }
+    }
+
+    const specPath = path.join(rootDir, entry.spec);
+    const parseResult = safeLoadYaml<TemplateSpec>(specPath);
+    if (parseResult.error) {
+      errors.push(parseResult.error);
+      continue;
+    }
+
+    const spec = parseResult.value as TemplateSpec;
+    const wiki = spec.wiki_update;
+    if (!wiki || typeof wiki !== 'object') {
+      errors.push({
+        filePath: specPath,
+        message: `Template '${entry.key}' is missing wiki_update metadata.`,
+        hint: 'Add wiki_update.enabled, wiki_update.contract_ref, wiki_update.output_mode_default, and wiki_update.human_approval_default.',
+      });
+      continue;
+    }
+
+    if (wiki.enabled !== expectedDefaults.enabled) {
+      errors.push({
+        filePath: specPath,
+        message: `Template '${entry.key}' has wiki_update.enabled='${String(wiki.enabled)}' but expected '${String(expectedDefaults.enabled)}'.`,
+        hint: `Set wiki_update.enabled to ${String(expectedDefaults.enabled)}.`,
+      });
+    }
+
+    if (wiki.contract_ref !== expectedContractRef) {
+      errors.push({
+        filePath: specPath,
+        message: `Template '${entry.key}' has wiki_update.contract_ref='${wiki.contract_ref ?? 'undefined'}' but expected '${expectedContractRef}'.`,
+        hint: `Set wiki_update.contract_ref to '${expectedContractRef}'.`,
+      });
+    }
+
+    if (wiki.output_mode_default !== expectedOutputMode) {
+      errors.push({
+        filePath: specPath,
+        message: `Template '${entry.key}' has wiki_update.output_mode_default='${wiki.output_mode_default ?? 'undefined'}' but expected '${expectedOutputMode}'.`,
+        hint: `Set wiki_update.output_mode_default to '${expectedOutputMode}'.`,
+      });
+    }
+
+    if (wiki.human_approval_default !== expectedApproval) {
+      errors.push({
+        filePath: specPath,
+        message: `Template '${entry.key}' has wiki_update.human_approval_default='${String(wiki.human_approval_default)}' but expected '${String(expectedApproval)}'.`,
+        hint: `Set wiki_update.human_approval_default to ${String(expectedApproval)}.`,
+      });
+    }
+  }
+
+  return errors;
+}
+
 function parseArgs(argv: string[]): ValidationOptions {
   const options: ValidationOptions = {
     rootDir: process.cwd(),
@@ -844,6 +1195,10 @@ export function runValidation(options: ValidationOptions): {
 
   const matrix = loadYaml<ParityMatrix>(matrixPath);
   const catalog = loadYaml<StackCatalog>(catalogPath);
+  const wikiContractValidation = validateWikiUpdateContract(
+    rootDir,
+    WIKI_CONTRACT_RELATIVE_PATH
+  );
 
   const ciContractPath = path.join(rootDir, 'Templates/shared/ci-command-contract.yaml');
   const ciMatrixPath = path.join(
@@ -866,6 +1221,15 @@ export function runValidation(options: ValidationOptions): {
   const errors: ValidationError[] = [];
 
   errors.push(...validateCiCommandContract(ciContract, ciContractPath));
+  errors.push(...wikiContractValidation.errors);
+  errors.push(
+    ...validateTemplateWikiUpdateMetadata(
+      rootDir,
+      catalog,
+      wikiContractValidation.defaults,
+      catalogPath
+    )
+  );
   errors.push(
     ...validateCiStackCommandMatrix(
       catalog,
@@ -920,7 +1284,7 @@ export function main(): number {
     }
 
     console.log(
-      '[parity] Validation passed. Stack mappings, template capabilities, and parity evidence are aligned.'
+      '[parity] Validation passed. Stack mappings, wiki metadata, template capabilities, and parity evidence are aligned.'
     );
     return 0;
   } catch (error) {

@@ -44,3 +44,9 @@ testing_starter:
     mode: api
     semantics: API smoke/integration suite for readiness, reporting, and admin endpoints.
     sample_target: tests/E2E/ApiSmokeTests.cs
+
+wiki_update:
+  enabled: true
+  contract_ref: Templates/shared/wiki-update-contract.yaml
+  output_mode_default: pr
+  human_approval_default: true

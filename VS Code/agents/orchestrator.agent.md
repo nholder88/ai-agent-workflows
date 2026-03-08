@@ -49,6 +49,9 @@ INPUT
 [STAGE 0] Intake & Classification
   │
   ▼
+[STAGE 0.5] Documentation Discovery Preflight
+  │
+  ▼
 [STAGE 1] Assumption Review          ← skip for trivial tasks
   │
   ▼
@@ -75,9 +78,12 @@ INPUT
                │
           ┌────┴────┐
        PASS         FAIL
-          │           │
-          ▼           ▼
-       [DONE]    [FIX LOOP]  ← max 3 iterations, then escalate
+       │           │
+       ▼           ▼
+[STAGE 7.5] Wiki Update Post-Task Hook
+       │
+       ▼
+     [DONE]    [FIX LOOP]  ← max 3 iterations, then escalate
 ```
 
 ---
@@ -87,6 +93,18 @@ INPUT
 ### STAGE 0 — Intake & Classification
 
 Before running any agent, classify the task:
+
+**Workspace Detection:**
+
+- Detect execution mode: `WORKSPACE_MODE: single-repo|multi-folder`
+- If in multi-folder mode, inventory every top-level folder in the active workspace
+- Record folder-level purpose signals (language/framework markers, build files, service/app boundaries)
+
+**Repository Inventory:**
+
+- For single-repo: inventory top-level directories and key root artifacts
+- For multi-folder: inventory top-level directories and key root artifacts per folder
+- Carry this inventory into Stage 0.5 documentation checks
 
 **Task Type:**
 
@@ -109,6 +127,36 @@ Before running any agent, classify the task:
 - Note the primary language and framework from `package.json`, `*.csproj`, `go.mod`, etc.
 
 Use classification to decide which stages to skip. Document the classification and skip decisions in the pipeline log (see Tracking below).
+
+---
+
+### STAGE 0.5 — Documentation Discovery Preflight
+
+**When to run:** Always for repo/workspace tasks before Stage 1, Stage 2, or Stage 4.
+
+**Repo behavior:** Check for existing documentation artifacts before any architecture/design or implementation activity.
+
+**Workspace behavior:** In multi-folder mode, scan each top-level folder, collect context signals, and check documentation artifacts in each folder.
+
+**Documentation target patterns (default):**
+
+- `Documentation/**`
+- `docs/**`
+- `README.md` (repo root in single-repo mode)
+- `<folder>/README.md` (required check for each top-level folder in multi-folder mode)
+- `Design/**`
+- `**/*architecture*.md`
+- `**/*adr*.md`
+
+**Missing docs behavior:** If documentation coverage is missing or insufficient, present the one-click handoff action `Reverse engineer first` to invoke `system-reverse-engineer` before continuing.
+
+**Decision gate:** Do not proceed to Stage 1, Stage 2, or Stage 4 until one of the following is true:
+
+- Documentation artifacts were found and logged
+- Reverse engineering was completed and outputs were verified
+- User explicitly confirms to continue without docs
+
+**Post reverse-engineer verification:** After `Reverse engineer first` completes, re-run documentation discovery checks, update coverage status and discovered paths, then re-evaluate the gate.
 
 ---
 
@@ -189,6 +237,7 @@ Use classification to decide which stages to skip. Document the classification a
 | ----------------------------------------------------------------------- | ------------------------ |
 | TypeScript, JavaScript, React, Next.js, Vue, SvelteKit, NestJS, Express | `typescript-implementer` |
 | Next.js + Skeleton UI specifically                                      | `nextjs-skeleton-expert` |
+| Angular (any version), Angular Material                                | `angular-implementer`    |
 | Python, Django, FastAPI, Flask                                          | `python-implementer`     |
 | C# / .NET, ASP.NET Core, Blazor                                         | `csharp-implementer`     |
 | Rust, Actix, Axum                                                       | `rust-implementer`       |
@@ -356,6 +405,79 @@ Run test agents based on what was implemented. These can be run in parallel if b
 
 ---
 
+### STAGE 7.5 — Wiki Update Post-Task Hook (conditional)
+
+**Run when:** Stage 7 result is `PASS`.
+
+**Skip when:** Stage 7 result is `FAIL` or `INCOMPLETE`.
+
+**Policy source of truth:** `Templates/shared/wiki-update-contract.yaml`
+
+**Invoke:** `wiki-update-agent`
+
+**Required defaults:**
+
+- Scope: `github.com` + GHES allowlist only
+- Trigger: `stage7_pass`
+- Failure mode: `non_blocking_warning_audit`
+- Output mode default: `pr`
+- Human approval default: `true`
+
+**Host policy behavior:**
+
+- Normalize host by lowercasing, stripping trailing dot, and removing explicit port.
+- Proceed only when normalized host is `github.com` or a normalized allowlisted GHES host.
+- Otherwise skip wiki flow and emit warning + audit event.
+
+**Classifier output contract:**
+
+- `eligible: boolean`
+- `reasonCode: string`
+- `summaryHints: string[]`
+
+**Classifier precedence (deterministic):**
+
+1. Internal-only/refactor-only context -> `eligible=false`
+2. No user-facing change and no how-to impact -> `eligible=false`
+3. Mixed changes with any user-facing functional change -> `eligible=true`
+4. How-to guidance implications with low/no functional delta -> `eligible=true`
+
+**Generation contract (eligible only):**
+
+- Required sections:
+  - `What changed for users`
+  - `How to use`
+  - `Out of scope/internal details`
+- Required metadata:
+  - `outputMode: pr`
+  - `humanApprovalRequired: true`
+
+**Idempotency and retries:**
+
+- On Stage 7 retries for the same task context, do not regenerate wiki output unless explicit rerun intent is provided.
+- Record idempotent skip metadata in audit output.
+
+**Failure semantics (non-blocking):**
+
+- Wiki path failures must never fail the pipeline.
+- Emit warning output and structured audit payload.
+
+**Audit payload required fields:**
+
+- `taskId`
+- `stage`
+- `host`
+- `reasonCode`
+- `errorType`
+- `timestamp`
+- `result`
+
+**Fallback audit behavior:**
+
+- If full payload construction fails, emit minimal warning with `taskId`, `stage`, and error summary.
+
+---
+
 ## Fix Loop Management
 
 Track fix loops per stage separately. Never silently repeat a fix — always log what changed and why.
@@ -394,10 +516,21 @@ During Stage 0 classification, also determine:
 
 These flags determine whether Stage 4.5 runs and which variant of the UI/UX review to request.
 
+**Add documentation readiness flags to intake:**
+
+During Stage 0 and Stage 0.5, also determine:
+
+- `WORKSPACE_MODE: single-repo|multi-folder`
+- `DOC_COVERAGE: complete|partial|missing`
+- `DOC_PATHS_FOUND: [path1, path2, ...]`
+- `REVERSE_ENGINEER_SUGGESTED: true/false`
+- `REVERSE_ENGINEER_RUN: true/false`
+
 Example todo items (updated):
 
 ```
 [IN_PROGRESS] STAGE 0: Intake — classify task type, complexity, UI scope
+[TODO]        STAGE 0.5: Documentation Discovery Preflight — scan docs and enforce gate
 [PASS]        STAGE 1: Assumption Review — 2 Risks found, carried forward
 [PASS]        STAGE 2: Architecture — 5 tasks generated
 [SKIP]        STAGE 3: PBI Clarification — spec already precise
@@ -407,6 +540,7 @@ Example todo items (updated):
 [TODO]        STAGE 5b: Frontend Tests
 [TODO]        STAGE 6: Documentation
 [TODO]        STAGE 7: Code Review
+[TODO]        STAGE 7.5: Wiki Update Post-Task Hook
 ```
 
 ### Pipeline Progress File (mandatory)
@@ -494,6 +628,13 @@ When invoking each agent, pass a **lean context package**. Include only stage-re
 
 **Project Conventions:**
 [Key conventions from CLAUDE.md or detected patterns]
+
+**Documentation Preflight:**
+
+- Coverage summary: [complete / partial / missing]
+- Paths found: [doc paths, per-folder if multi-folder]
+- Reverse engineer suggested: [true/false]
+- Reverse engineer run: [true/false]
 
 **Your Gate:**
 [Exact pass/fail criteria for this stage]
@@ -599,3 +740,5 @@ Before producing the final report, append a final completion entry to `agent-pro
 - **The spec is the source of truth.** If implementation and spec disagree, flag it — do not silently resolve in favor of either.
 - **Carry risks forward.** A Risk flagged in Stage 1 that was not blocked must appear in context packages for Stages 4, 5, and 7 as risk IDs with one-line impact notes.
 - **UI/UX gate runs before tests.** Stage 4.5 must pass before tests are written — fixing theme violations and missing states after tests exist causes test churn. Always gate in this order: implement → UI/UX review → fix → test.
+- **Stage 0.5 is mandatory before design/implementation.** Stage 0.5 must pass, or user override must be explicitly recorded, before Stage 2 or Stage 4 begins.
+- **Stage 7.5 is post-review and non-blocking.** Run wiki update only after Stage 7 PASS; warning/audit failures in wiki flow must not change overall pipeline pass/fail status.

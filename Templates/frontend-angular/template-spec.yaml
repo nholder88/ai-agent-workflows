@@ -53,3 +53,9 @@ testing_starter:
     mode: browser
     semantics: Browser journey for report and admin feature-flag flows.
     sample_target: e2e/reporting-admin.e2e-spec.ts
+
+wiki_update:
+  enabled: true
+  contract_ref: Templates/shared/wiki-update-contract.yaml
+  output_mode_default: pr
+  human_approval_default: true

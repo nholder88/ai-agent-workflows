@@ -16,6 +16,8 @@ import {
   validateStackCoverage,
   validateTemplateCapabilities,
   validateTemplateTestingMetadata,
+  validateTemplateWikiUpdateMetadata,
+  validateWikiUpdateContract,
   validateWorkflowTemplates,
 } from './validate-parity';
 
@@ -42,9 +44,43 @@ function writeCommonParityFixtures(rootDir: string): void {
       'frontend:',
       '  - key: nextjs',
       '    spec: Templates/frontend-nextjs/template-spec.yaml',
+      '    wiki_update:',
+      '      enabled: true',
+      '      contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '      output_mode_default: pr',
+      '      human_approval_default: true',
       'backend:',
       '  - key: python',
       '    spec: Templates/backend-python/template-spec.yaml',
+      '    wiki_update:',
+      '      enabled: true',
+      '      contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '      output_mode_default: pr',
+      '      human_approval_default: true',
+    ].join('\n')
+  );
+
+  writeYaml(
+    rootDir,
+    'Templates/shared/wiki-update-contract.yaml',
+    [
+      'version: 1.0.0',
+      'name: wiki-update-contract',
+      'policy:',
+      '  scope:',
+      '    githubDotCom: true',
+      '    ghesAllowlist: []',
+      '  trigger: stage7_pass',
+      '  failureMode: non_blocking_warning_audit',
+      '  outputMode: pr',
+      '  humanApproval: true',
+      'classification:',
+      '  include:',
+      '    - user_visible_functional_change',
+      '    - end_user_how_to',
+      '  exclude:',
+      '    - internal_refactor_only',
+      '    - low_level_framework_details',
     ].join('\n')
   );
 
@@ -247,6 +283,173 @@ test('validateTemplateCapabilities fails when template misses mapped capability'
 
   assert.equal(errors.length, 1);
   assert.match(errors[0].message, /missing mapped capabilities/i);
+});
+
+test('validateWikiUpdateContract fails when contract is missing', () => {
+  const rootDir = createTempRepo();
+
+  const result = validateWikiUpdateContract(
+    rootDir,
+    'Templates/shared/wiki-update-contract.yaml'
+  );
+
+  assert.equal(result.errors.length, 1);
+  assert.match(result.errors[0].message, /missing or malformed/i);
+});
+
+test('validateWikiUpdateContract fails when required policy fields are malformed', () => {
+  const rootDir = createTempRepo();
+  writeYaml(
+    rootDir,
+    'Templates/shared/wiki-update-contract.yaml',
+    [
+      'version: 1.0.0',
+      'name: wiki-update-contract',
+      'policy:',
+      '  scope:',
+      '    githubDotCom: false',
+      '  trigger: stage6_pass',
+      '  failureMode: blocking',
+      '  outputMode: commit',
+      '  humanApproval: false',
+      'classification:',
+      '  include: []',
+      '  exclude: []',
+    ].join('\n')
+  );
+
+  const result = validateWikiUpdateContract(
+    rootDir,
+    'Templates/shared/wiki-update-contract.yaml'
+  );
+
+  assert.ok(result.errors.some((error) => /githubDotCom must be true/i.test(error.message)));
+  assert.ok(result.errors.some((error) => /ghesAllowlist must be an array/i.test(error.message)));
+  assert.ok(result.errors.some((error) => /policy.trigger must be 'stage7_pass'/i.test(error.message)));
+  assert.ok(result.errors.some((error) => /policy.outputMode must be 'pr'/i.test(error.message)));
+  assert.ok(result.errors.some((error) => /classification.include is missing 'user_visible_functional_change'/i.test(error.message)));
+});
+
+test('validateTemplateWikiUpdateMetadata fails when stack spec omits required wiki_update keys', () => {
+  const rootDir = createTempRepo();
+
+  writeYaml(
+    rootDir,
+    'Templates/shared/stack-catalog.yaml',
+    [
+      'frontend:',
+      '  - key: nextjs',
+      '    spec: Templates/frontend-nextjs/template-spec.yaml',
+      '    wiki_update:',
+      '      enabled: true',
+      '      contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '      output_mode_default: pr',
+      '      human_approval_default: true',
+    ].join('\n')
+  );
+
+  writeYaml(
+    rootDir,
+    'Templates/frontend-nextjs/template-spec.yaml',
+    [
+      'required_capabilities: [CAP-FF-001]',
+      'wiki_update:',
+      '  enabled: true',
+      '  output_mode_default: pr',
+      '  human_approval_default: true',
+    ].join('\n')
+  );
+
+  const errors = validateTemplateWikiUpdateMetadata(
+    rootDir,
+    {
+      frontend: [
+        {
+          key: 'nextjs',
+          spec: 'Templates/frontend-nextjs/template-spec.yaml',
+          wiki_update: {
+            enabled: true,
+            contract_ref: 'Templates/shared/wiki-update-contract.yaml',
+            output_mode_default: 'pr',
+            human_approval_default: true,
+          },
+        },
+      ],
+    },
+    {
+      enabled: true,
+      contractRef: 'Templates/shared/wiki-update-contract.yaml',
+      outputMode: 'pr',
+      humanApproval: true,
+    },
+    path.join(rootDir, 'Templates/shared/stack-catalog.yaml')
+  );
+
+  assert.ok(errors.some((error) => /wiki_update.contract_ref='undefined'/i.test(error.message)));
+});
+
+test('validateTemplateWikiUpdateMetadata fails on default mismatch', () => {
+  const rootDir = createTempRepo();
+
+  writeYaml(
+    rootDir,
+    'Templates/shared/stack-catalog.yaml',
+    [
+      'backend:',
+      '  - key: python',
+      '    spec: Templates/backend-python/template-spec.yaml',
+      '    wiki_update:',
+      '      enabled: true',
+      '      contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '      output_mode_default: pr',
+      '      human_approval_default: true',
+    ].join('\n')
+  );
+
+  writeYaml(
+    rootDir,
+    'Templates/backend-python/template-spec.yaml',
+    [
+      'required_capabilities: [CAP-OPS-001]',
+      'wiki_update:',
+      '  enabled: true',
+      '  contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '  output_mode_default: commit',
+      '  human_approval_default: false',
+    ].join('\n')
+  );
+
+  const errors = validateTemplateWikiUpdateMetadata(
+    rootDir,
+    {
+      backend: [
+        {
+          key: 'python',
+          spec: 'Templates/backend-python/template-spec.yaml',
+          wiki_update: {
+            enabled: true,
+            contract_ref: 'Templates/shared/wiki-update-contract.yaml',
+            output_mode_default: 'pr',
+            human_approval_default: true,
+          },
+        },
+      ],
+    },
+    {
+      enabled: true,
+      contractRef: 'Templates/shared/wiki-update-contract.yaml',
+      outputMode: 'pr',
+      humanApproval: true,
+    },
+    path.join(rootDir, 'Templates/shared/stack-catalog.yaml')
+  );
+
+  assert.ok(
+    errors.some((error) => /output_mode_default='commit'/i.test(error.message))
+  );
+  assert.ok(
+    errors.some((error) => /human_approval_default='false'/i.test(error.message))
+  );
 });
 
 test('validateCiCommandContract fails when required slot is missing', () => {
@@ -746,6 +949,11 @@ test('runValidation passes with minimal valid fixture', () => {
       '    command: npm run test:e2e',
       '    mode: browser',
       '    semantics: Browser journey coverage',
+      'wiki_update:',
+      '  enabled: true',
+      '  contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '  output_mode_default: pr',
+      '  human_approval_default: true',
     ].join('\n')
   );
 
@@ -768,6 +976,11 @@ test('runValidation passes with minimal valid fixture', () => {
       '    command: pytest -m "e2e or smoke"',
       '    mode: api',
       '    semantics: API smoke and integration coverage',
+      'wiki_update:',
+      '  enabled: true',
+      '  contract_ref: Templates/shared/wiki-update-contract.yaml',
+      '  output_mode_default: pr',
+      '  human_approval_default: true',
     ].join('\n')
   );
 

@@ -8,39 +8,84 @@ frontend:
     spec: Templates/frontend-nextjs/template-spec.yaml
     env: Templates/frontend-nextjs/.env.example
     state_management: Zustand + TanStack Query
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: sveltekit
     framework: SvelteKit
     spec: Templates/frontend-sveltekit/template-spec.yaml
     env: Templates/frontend-sveltekit/.env.example
     state_management: Svelte stores + TanStack Query
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: angular
     framework: Angular
     spec: Templates/frontend-angular/template-spec.yaml
     env: Templates/frontend-angular/.env.example
     state_management: NgRx + RxJS services
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
 
 backend:
   - key: node_nestjs
     framework: NestJS
     spec: Templates/backend-service/template-spec.yaml
     env: Templates/backend-service/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: dotnet
     framework: ASP.NET Core
     spec: Templates/backend-dotnet/template-spec.yaml
     env: Templates/backend-dotnet/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: python
     framework: FastAPI
     spec: Templates/backend-python/template-spec.yaml
     env: Templates/backend-python/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: go
     framework: Fiber
     spec: Templates/backend-go/template-spec.yaml
     env: Templates/backend-go/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: java
     framework: Spring Boot
     spec: Templates/backend-java/template-spec.yaml
     env: Templates/backend-java/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
   - key: rust
     framework: Axum
     spec: Templates/backend-rust/template-spec.yaml
     env: Templates/backend-rust/.env.example
+    wiki_update:
+      enabled: true
+      contract_ref: Templates/shared/wiki-update-contract.yaml
+      output_mode_default: pr
+      human_approval_default: true
