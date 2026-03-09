@@ -1,4 +1,4 @@
-# AI Agent Workflows 
+# AI Agent Workflows
 
 This repository contains a curated pack of custom AI agents, workflow docs, and template governance tooling for VS Code and Cursor.
 
@@ -188,7 +188,10 @@ When editing or creating agents in this repo, author files in `VS Code/agents/` 
 
 Agents can hand off to other agents via the **handoffs** defined in each agent’s YAML frontmatter. The diagram below summarizes **outbound** handoffs between specialists (strategy → design → review → implementation → testing → deploy/doc). Use the handoff buttons that appear after a response to move to the next agent with context and a pre-filled prompt.
 
+Frontend implementation routing is specialist-first: Next.js routes to `nextjs-skeleton-expert`, SvelteKit routes to `sveltekit-skeleton-expert`, and Angular routes to `angular-implementer`. `typescript-frontend-implementer` is the generic fallback for other frontend TypeScript stacks (for example React, Vue, and Nuxt).
+
 Documentation scope is split intentionally:
+
 - `code-documenter` handles in-code and API reference documentation.
 - `markdown-technical-writer` handles non-code docs/config/agent files.
 
@@ -223,6 +226,11 @@ flowchart LR
   end
   subgraph impl [Implementation]
     tsImpl[typescript-implementer]
+    tsBackendImpl[typescript-backend-implementer]
+    tsFrontendImpl[typescript-frontend-implementer]
+    nextjsExpert[nextjs-skeleton-expert]
+    sveltekitExpert[sveltekit-skeleton-expert]
+    angularImpl[angular-implementer]
   end
   subgraph test [Testing]
     backendTest[backend-unit-test-specialist]
@@ -262,11 +270,43 @@ flowchart LR
 
   tsImpl -->|Review code| codeReview
   tsImpl -->|Clarify spec| pbiClarifier
+  tsImpl -->|Backend TS implementation| tsBackendImpl
+  tsImpl -->|Frontend TS fallback| tsFrontendImpl
+  tsImpl -->|Next.js specialist| nextjsExpert
+  tsImpl -->|SvelteKit specialist| sveltekitExpert
+  tsImpl -->|Angular specialist| angularImpl
   tsImpl -->|Unit frontend| frontendTest
   tsImpl -->|Unit backend| backendTest
   tsImpl -->|Add docs| doc
   tsImpl -->|Edit non-code docs| mdWriter
   tsImpl -->|Plan architecture| architect
+
+  tsBackendImpl -->|Review code| codeReview
+  tsBackendImpl -->|Unit backend| backendTest
+  tsBackendImpl -->|Add docs| doc
+
+  tsFrontendImpl -->|Review code| codeReview
+  tsFrontendImpl -->|Unit frontend| frontendTest
+  tsFrontendImpl -->|E2E| uiTest
+  tsFrontendImpl -->|Add docs| doc
+  tsFrontendImpl -->|Delegate Next.js| nextjsExpert
+  tsFrontendImpl -->|Delegate SvelteKit| sveltekitExpert
+  tsFrontendImpl -->|Delegate Angular| angularImpl
+
+  nextjsExpert -->|Review code| codeReview
+  nextjsExpert -->|Unit frontend| frontendTest
+  nextjsExpert -->|E2E| uiTest
+  nextjsExpert -->|Add docs| doc
+
+  sveltekitExpert -->|Review code| codeReview
+  sveltekitExpert -->|Unit frontend| frontendTest
+  sveltekitExpert -->|E2E| uiTest
+  sveltekitExpert -->|Add docs| doc
+
+  angularImpl -->|Review code| codeReview
+  angularImpl -->|Unit frontend| frontendTest
+  angularImpl -->|E2E| uiTest
+  angularImpl -->|Add docs| doc
 
   docker -->|Review configs| codeReview
   docker -->|Reverse engineer| systemRev
