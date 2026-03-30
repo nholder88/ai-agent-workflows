@@ -47,6 +47,7 @@ describe('runInstall', () => {
         toolIds: ['testtool'],
         registry,
         workspaceRoot: null,
+        workspaceSkills: false,
         workspaceTemplates: false,
         dryRun: true,
       });

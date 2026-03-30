@@ -11,6 +11,8 @@ export interface RunInstallOptions {
   toolIds: string[];
   registry: ToolRegistryFile;
   workspaceRoot: string | null;
+  /** When workspace is set, copy `.github/skills` (default true). */
+  workspaceSkills: boolean;
   workspaceTemplates: boolean;
   dryRun: boolean;
 }
@@ -199,7 +201,7 @@ export async function runInstall(opts: RunInstallOptions): Promise<{ manifest: I
     let templatesPath: string | null = null;
     let templatesFileCount = 0;
 
-    if (fsSync.existsSync(skillsSourceDir)) {
+    if (opts.workspaceSkills && fsSync.existsSync(skillsSourceDir)) {
       const firstTool = getToolById(opts.registry, opts.toolIds[0]!);
       const skillsResult = await emitWorkspaceSkills(workspaceRoot, ctx, firstTool.adapterId, opts.dryRun);
       workspaceInstalled.push(...skillsResult.paths);

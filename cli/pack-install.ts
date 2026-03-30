@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { checkbox, confirm, input } from '@inquirer/prompts';
 import { defaultInstallRoot, getNodePlatform } from './lib/paths.js';
 import { loadToolsRegistry, listToolIds } from './lib/registry.js';
-import { runInstall } from './lib/pipeline.js';
+import { runInstall, type InstallManifestV3 } from './lib/pipeline.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,6 +19,7 @@ interface ParsedArgs {
   targets: string[] | null;
   workspace: string | undefined;
   workspaceTemplates: boolean;
+  noWorkspaceSkills: boolean;
   source: string;
   installRoot: string;
   dryRun: boolean;
@@ -32,6 +33,7 @@ function parseArgs(argv: string[]): ParsedArgs {
     targets: null,
     workspace: undefined,
     workspaceTemplates: false,
+    noWorkspaceSkills: false,
     source: defaultRepoRoot(),
     installRoot: defaultInstallRoot(),
     dryRun: false,
@@ -54,6 +56,8 @@ function parseArgs(argv: string[]): ParsedArgs {
       out.workspace = argv[++i]!;
     } else if (a === '--workspace-templates') {
       out.workspaceTemplates = true;
+    } else if (a === '--no-workspace-skills') {
+      out.noWorkspaceSkills = true;
     } else if (a === '--source' && argv[i + 1]) {
       out.source = path.resolve(argv[++i]!);
     } else if (a === '--install-root' && argv[i + 1]) {
@@ -82,16 +86,20 @@ function printHelp(): void {
 Install agents + Templates into selected IDE prompt folders; optionally copy
 skills and Templates into a project workspace.
 
+Run without --yes for an interactive wizard (select editors, workspace options,
+dry-run, confirm).
+
 Options:
   --targets <id,id>     Comma-separated tool ids (e.g. vscode,cursor)
   --target <id>         Add one target (repeatable)
-  --workspace <path>    Project root: install .github/skills when present
+  --workspace <path>    Project root for optional workspace copies
   --workspace-templates Copy Templates/ into <workspace>/Templates/
+  --no-workspace-skills Skip copying .github/skills when using --workspace
   --source <path>       Pack repo root (default: parent of cli/)
   --install-root <path> Manifest folder (default: OS-specific pack metadata root)
   --registry <path>     Override cli/tools.registry.json
   --dry-run             Print actions without writing files
-  --yes, -y             Non-interactive (requires --targets)
+  --yes, -y             Non-interactive (use with --targets; optional --workspace)
   -h, --help            Show help
 `);
 }
@@ -110,13 +118,25 @@ async function main(): Promise<void> {
 
   const registry = loadToolsRegistry(args.registryPath ?? undefined);
   const validIds = listToolIds(registry);
+  const interactive = !args.yes;
+
+  if (interactive) {
+    console.log('');
+    console.log('  AI Agent Workflows — pack installer');
+    console.log('  Select where to install agents, Templates, and optional workspace files.');
+    console.log('');
+  }
 
   let toolIds: string[] = args.targets ?? [];
 
-  if (!args.yes && toolIds.length === 0) {
+  if (interactive) {
     toolIds = await checkbox({
-      message: 'Install pack to which editors?',
-      choices: registry.tools.map((t) => ({ name: t.label, value: t.id, checked: true })),
+      message: 'Which editors should receive agents + Templates?',
+      choices: registry.tools.map((t) => ({
+        name: t.label,
+        value: t.id,
+        checked: args.targets == null ? true : args.targets.includes(t.id),
+      })),
       required: true,
     });
   }
@@ -135,28 +155,77 @@ async function main(): Promise<void> {
 
   let workspaceRoot: string | null = args.workspace != null ? path.resolve(args.workspace) : null;
   let workspaceTemplates = args.workspaceTemplates;
+  let workspaceSkills = true;
 
-  if (!args.yes) {
-    if (args.workspace === undefined) {
-      const useWs = await confirm({
-        message: 'Also install skills (and optional Templates) into a project workspace?',
-        default: false,
+  if (interactive) {
+    const defaultSkills =
+      args.workspace !== undefined ? !args.noWorkspaceSkills : false;
+    const defaultTemplates = args.workspaceTemplates;
+
+    const wsChoices = await checkbox({
+      message: 'Optional: also copy pack files into a project workspace?',
+      choices: [
+        {
+          name: 'Copy .github/skills → workspace/.github/skills',
+          value: 'skills' as const,
+          checked: defaultSkills,
+        },
+        {
+          name: 'Copy Templates/ → workspace/Templates/',
+          value: 'templates' as const,
+          checked: defaultTemplates,
+        },
+      ],
+    });
+
+    workspaceSkills = wsChoices.includes('skills');
+    workspaceTemplates = wsChoices.includes('templates');
+
+    if (workspaceSkills || workspaceTemplates) {
+      const ws = await input({
+        message: 'Workspace root (project folder)',
+        default: args.workspace ?? process.cwd(),
       });
-      if (useWs) {
-        const ws = await input({
-          message: 'Workspace root path',
-          default: process.cwd(),
-        });
-        workspaceRoot = ws.trim() ? path.resolve(ws.trim()) : null;
+      workspaceRoot = ws.trim() ? path.resolve(ws.trim()) : null;
+      if (!workspaceRoot) {
+        workspaceSkills = false;
+        workspaceTemplates = false;
       }
+    } else {
+      workspaceRoot = null;
     }
-    if (workspaceRoot && !args.workspaceTemplates) {
-      workspaceTemplates = await confirm({
-        message: 'Copy Templates/ into workspace (for scaffold prompts / parity tooling)?',
-        default: false,
-      });
+
+    const dryRunInteractive = await confirm({
+      message: 'Preview only (dry-run, no files written)?',
+      default: args.dryRun,
+    });
+
+    const proceed = await confirm({
+      message: 'Run installation with these choices?',
+      default: true,
+    });
+    if (!proceed) {
+      console.log('Cancelled.');
+      process.exit(0);
     }
-  } else if (workspaceTemplates && workspaceRoot === null) {
+
+    const { manifest, manifestPath } = await runInstall({
+      repoRoot: args.source,
+      installRoot: args.installRoot,
+      toolIds,
+      registry,
+      workspaceRoot,
+      workspaceSkills: workspaceRoot ? workspaceSkills : false,
+      workspaceTemplates,
+      dryRun: dryRunInteractive,
+    });
+
+    printSummary(manifestPath, manifest, dryRunInteractive);
+    return;
+  }
+
+  workspaceSkills = !args.noWorkspaceSkills && args.workspace !== undefined;
+  if (args.workspaceTemplates && workspaceRoot === null) {
     console.error('--workspace-templates requires --workspace');
     process.exit(1);
   }
@@ -166,12 +235,17 @@ async function main(): Promise<void> {
     installRoot: args.installRoot,
     toolIds,
     registry,
-    workspaceRoot: workspaceRoot ? path.resolve(workspaceRoot) : null,
+    workspaceRoot,
+    workspaceSkills,
     workspaceTemplates,
     dryRun: args.dryRun,
   });
 
-  if (args.dryRun) {
+  printSummary(manifestPath, manifest, args.dryRun);
+}
+
+function printSummary(manifestPath: string, manifest: InstallManifestV3, dryRun: boolean): void {
+  if (dryRun) {
     console.log('[dry-run] Would write manifest to:', manifestPath);
   } else {
     console.log('[ok] Manifest:', manifestPath);

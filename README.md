@@ -30,18 +30,23 @@ bash ./installer/mac/setup.sh
 
 ## CLI installer (Node)
 
-Cross-platform installer with interactive editor selection, optional workspace skills, and optional `Templates/` copy into a project. Requires Node.js 20+ and dependencies installed (`npm install` in this repo).
+Cross-platform installer with an **interactive wizard** (default) or scripted flags with `--yes`. Requires Node.js 20+ and `npm install` in this repo.
 
-```bash
-npm run pack:install
-```
+**Interactive** (no `--yes`): run `npm run pack:install` and step through:
 
-Non-interactive examples:
+1. Select editors (VS Code, Cursor, …) — all selected by default; CLI `--targets` pre-checks those ids when provided.
+2. Optionally copy **skills** and/or **Templates** into a project workspace (separate checkboxes).
+3. Workspace folder path when any workspace option is chosen.
+4. Dry-run preview on/off.
+5. Final confirmation before writing files.
+
+**Non-interactive examples:**
 
 ```bash
 npm run pack:install -- --yes --targets vscode,cursor
 npm run pack:install -- --yes --targets vscode --workspace /path/to/project
 npm run pack:install -- --yes --targets cursor --workspace /path/to/project --workspace-templates
+npm run pack:install -- --yes --targets vscode --workspace /path/to/project --no-workspace-skills --workspace-templates
 npm run pack:install -- --dry-run --yes --targets vscode
 ```
 
