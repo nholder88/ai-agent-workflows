@@ -4,6 +4,16 @@
   "version": "1.0.0",
   "description": "Tooling for template parity validation",
   "type": "module",
+  "bin": {
+    "ai-agent-pack-install": "./bin/pack-install.mjs"
+  },
+  "files": [
+    "agents",
+    "templates",
+    "skills",
+    "cli",
+    "bin"
+  ],
   "scripts": {
     "templates:validate-parity": "node --import tsx templates/tools/validate-parity.ts --root .",
     "templates:test-parity": "node --import tsx --test templates/tools/validate-parity.test.ts",

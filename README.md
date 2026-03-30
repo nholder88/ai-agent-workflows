@@ -33,7 +33,29 @@ bash ./installer/mac/setup.sh
 
 Cross-platform installer with an **interactive wizard** (default) or scripted flags with `--yes`. Requires Node.js 20+ and `npm install` in this repo.
 
-**Interactive** (no `--yes`): run `npm run pack:install` and step through:
+### Install the CLI globally (any folder on your machine)
+
+From a clone of this repo you can link or install globally so the command `ai-agent-pack-install` is on your `PATH`. The published tarball includes `agents/`, `templates/`, `skills/`, and `cli/`; the default `--source` is that package root, so you can point **workspace** at any project.
+
+```bash
+# Option A: global install from a local path (works while package.json has "private": true)
+npm install -g /absolute/path/to/cuddly-robot
+
+# Option B: npm link from the repo (good for development)
+cd /path/to/cuddly-robot && npm link
+```
+
+Then, from anywhere:
+
+```bash
+ai-agent-pack-install --yes --targets vscode,cursor --workspace /path/to/any/project
+```
+
+That installs agents + templates into your VS Code/Cursor user prompt folders (machine-wide) and optionally copies **skills** and/or **templates** into the chosen project (`--workspace`). Use a different pack checkout with `--source /other/path/to/cuddly-robot` if needed.
+
+Publishing to the public npm registry would require removing `"private": true` and a package name that is not taken; until then, use `npm install -g <path>` or `npm link`.
+
+**Interactive** (no `--yes`): run `npm run pack:install` or `ai-agent-pack-install` and step through:
 
 1. Select editors (VS Code, Cursor, …) — all selected by default; CLI `--targets` pre-checks those ids when provided.
 2. Optionally copy **skills** and/or **Templates** into a project workspace (separate checkboxes).
