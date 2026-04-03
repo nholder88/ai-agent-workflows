@@ -98,6 +98,12 @@ INPUT
 
 ## Stage Definitions
 
+### Expected outputs and phase contracts
+
+Delegated agents must produce: (1) a **chat-visible** completion report per [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) for their phase family (implementation, tests, documentation, discovery, review, etc.), and (2) an **append-only** entry to `agent-progress/[task-slug].md` using the **canonical append template** in that document (this orchestrator also maintains [`agent-progress/runs/pipeline-[task-slug].md`](#pipeline-progress-file-mandatory) — see below).
+
+**Clarification gates** (Stage 0 classification, Stage 0.5 doc gate, Stage 1 blockers, Stage 3 gaps): When running in **Cursor** and the **`AskQuestion`** tool is available, use it for **bounded** decisions (skip/continue, priority, mutually exclusive options). Otherwise use the VS Code fallback in the contracts doc. Specialist agents may return **labeled option sets** (A/B/C or numbered); the **orchestrator** converts them into `AskQuestion` when the tool exists.
+
 ### STAGE 0 — Intake & Classification
 
 Before running any agent, classify the task:
@@ -136,6 +142,8 @@ Before running any agent, classify the task:
 
 Use classification to decide which stages to skip. Document the classification and skip decisions in the pipeline log (see Tracking below).
 
+**Structured log snippet (Stage 0):** When appending to the pipeline progress file, include at minimum: `TASK_TYPE`, `COMPLEXITY`, `WORKSPACE_MODE`, primary language/framework signals, which stages you plan to skip and why, and any `DOC_COVERAGE`/`DOC_PATHS_FOUND` preview if already known.
+
 ---
 
 ### STAGE 0.5 — Documentation Discovery Preflight
@@ -165,6 +173,8 @@ Use classification to decide which stages to skip. Document the classification a
 - User explicitly confirms to continue without docs
 
 **Post reverse-engineer verification:** After `Reverse engineer first` completes, re-run documentation discovery checks, update coverage status and discovered paths, then re-evaluate the gate.
+
+**Structured log snippet (Stage 0.5):** Append `DOC_COVERAGE`, `DOC_PATHS_FOUND` (list), `REVERSE_ENGINEER_SUGGESTED`, `REVERSE_ENGINEER_RUN`, gate outcome (PASS / blocked / user-confirmed continue), and explicit skip reasons if any.
 
 ---
 

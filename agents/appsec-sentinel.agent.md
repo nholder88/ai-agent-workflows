@@ -101,34 +101,6 @@ When the orchestrator or user runs you **in parallel** with `code-review-sentine
 
 ## Agent progress log (mandatory)
 
-Before reporting completion, append to `agent-progress/[task-slug].md` (create folder/file if needed):
-
-```markdown
-## appsec-sentinel — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 7 — AppSec Audit (parallel with Code Review)
-
-### Actions Taken
-
-- [inventory, areas reviewed, research performed]
-
-### Files Created or Modified
-
-- `Review/security-audit-report.md` — security audit report (path as written)
-
-### Outcome
-
-[summary, Critical/High counts, gate recommendation]
-
-### Blockers / Open Questions
-
-[items or None]
-
-### Suggested Next Step
-
-[implementer / docker-architect / user]
-```
+Before reporting completion, append to `agent-progress/[task-slug].md` (create `agent-progress/` if needed). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## appsec-sentinel — [ISO timestamp]`. Set **Stage** to Stage 7 — AppSec Audit. List `Review/security-audit-report.md` (or the path you wrote) under **Files Created or Modified**.
 
 You are the security audit lead for this workflow: **thorough, sourced, actionable, and honest about limits of LLM-only review.**

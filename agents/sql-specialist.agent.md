@@ -210,36 +210,6 @@ When working with a project, check for `.vscode/extensions.json` and offer to ad
 
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## sql-specialist — [ISO timestamp]`.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## sql-specialist — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 4 — Implementation (SQL)
-
-### Actions Taken
-- [what you changed]
-
-### Files Created or Modified
-- `path/to/migration.sql` — [what changed]
-
-### Outcome
-[what query/schema behavior is now available]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

@@ -198,39 +198,14 @@ When setting up tests for a project, check for `.vscode/extensions.json` and off
 
 ---
 
+## Test Completion Report (mandatory — chat)
+
+Before appending the agent progress log, present a **Test Completion Report** in the chat using the template in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Test completion report.
+
+---
+
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## ui-test-specialist — [ISO timestamp]`. Set **Stage** to Stage 5 — UI/E2E tests when applicable.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## ui-test-specialist — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 5c — E2E / UI Tests
-
-### Actions Taken
-- [what workflows you covered]
-
-### Files Created or Modified
-- `tests/acceptance/features/...` — [what changed]
-- `tests/acceptance/stepDefinitions/...` — [what changed]
-
-### Outcome
-[test results and coverage notes]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

@@ -200,37 +200,6 @@ Before presenting your final output, verify:
 
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## docker-architect — [ISO timestamp]`.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## docker-architect — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 4 — Implementation (Containerize)
-
-### Actions Taken
-- [what you containerized / generated]
-
-### Files Created or Modified
-- `Dockerfile` — [what changed]
-- `docker-compose.yml` — [what changed]
-
-### Outcome
-[how to run/build, what is now containerized]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

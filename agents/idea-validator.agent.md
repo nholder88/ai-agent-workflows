@@ -201,36 +201,6 @@ When working in a project, check for `.vscode/extensions.json` and suggest addin
 
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## idea-validator — [ISO timestamp]`.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## idea-validator — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 0 — Intake & Classification
-
-### Actions Taken
-- [what you did]
-
-### Files Created or Modified
-- `path/to/report.md` — [what changed]
-
-### Outcome
-[what report/MVP definition was produced]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

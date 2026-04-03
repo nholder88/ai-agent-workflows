@@ -308,38 +308,14 @@ When working with a project, check for `.vscode/extensions.json` and offer to ad
 
 ---
 
+## Discovery executive summary (mandatory — chat)
+
+After the spec files are written, present a **Discovery executive summary** in the chat using the template in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Discovery executive summary.
+
+---
+
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## system-reverse-engineer — [ISO timestamp]`. Set **Stage** to Stage 0 — Reverse engineer first when applicable.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## system-reverse-engineer — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 0 — Reverse engineer first
-
-### Actions Taken
-- [what you analyzed]
-
-### Files Created or Modified
-- `docs/system-spec/...` — [what changed]
-
-### Outcome
-[what spec was produced and how to use it]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

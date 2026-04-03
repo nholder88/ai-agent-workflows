@@ -232,6 +232,8 @@ If you do not want to run installers, you can manually copy:
 
 When editing or creating agents in this repo, author files in `agents/` and then run update to push changes to your installed location(s).
 
+**Phase output contracts:** Chat-visible completion reports and append-only `agent-progress/` templates are defined in **[Documentation/phase-output-contracts.md](Documentation/phase-output-contracts.md)** (aligned with the orchestrator pipeline).
+
 ---
 
 ## Flows

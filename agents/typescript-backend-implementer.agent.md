@@ -102,29 +102,14 @@ On completion, return:
 - [ ] Tests for changed behavior pass.
 - [ ] No secrets or sensitive data are logged.
 
+## Implementation Complete Report (mandatory — chat)
+
+Before appending the agent progress log, present an **Implementation Complete Report** in the chat using the template in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Implementation Complete Report. Include **Verification** and **Risks and follow-ups** there (they map to the former PASS/FAIL log fields).
+
+---
+
 ## Agent Progress Log — Final Step (mandatory)
 
-Append one concise completion entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## typescript-backend-implementer — [ISO timestamp]`.
 
-`agent-progress/pipeline-[task-slug].md`
-
-Use this minimal structure:
-
-```markdown
-## typescript-backend-implementer — [ISO timestamp]
-
-**Task:** [one-line]
-**Status:** [PASS/FAIL]
-
-### Files Changed
-
-- `path/to/file` — [short purpose]
-
-### Verification
-
-- [command] — [result]
-
-### Risks / Follow-ups
-
-[None or short list]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.

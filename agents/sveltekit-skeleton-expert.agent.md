@@ -170,3 +170,17 @@ Place new Skeleton-backed components in `src/lib/components/`. Keep layout struc
 - **General frontend work without Skeleton** — Suggest **typescript-frontend-implementer** for non-Skeleton SvelteKit, React, or Vue work.
 - **Code review, tests, or docs** — Use handoffs to `code-review-sentinel`, `frontend-unit-test-specialist`, `backend-unit-test-specialist`, and `code-documenter` as appropriate.
 
+---
+
+## Implementation Complete Report (mandatory — chat)
+
+Before appending the agent progress log, present an **Implementation Complete Report** in the chat using the template in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Implementation Complete Report.
+
+---
+
+## Agent Progress Log — Final Step (mandatory)
+
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## sveltekit-skeleton-expert — [ISO timestamp]`.
+
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.
+

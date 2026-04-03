@@ -168,40 +168,14 @@ When working in a project, check for `.vscode/extensions.json` and suggest addin
 - `gruntfuggly.todo-tree` -- Surfaces TODO, FIXME, and assumption markers in the review output.
 - `bierner.markdown-mermaid` -- Renders any Mermaid diagrams you include in the review (e.g., risk matrices or process gaps).
 
+## Structured clarification (Cursor)
+
+When the parent session runs in **Cursor** and has the **`AskQuestion`** tool, prefer **bounded choices** (severity, blocker vs proceed, which gap to tackle first) via that tool instead of long open-ended question lists. **Orchestrator** (or parent) owns `AskQuestion` when this agent is invoked as a subagent—phrase your output as **labeled option sets** (A/B/C or numbered) so the parent can convert them into `AskQuestion` calls. If `AskQuestion` is unavailable, use the fallback in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Structured clarification.
+
 ---
 
 ## Agent Progress Log — Final Step (mandatory)
 
-Before reporting your result to the user (or handing off to another agent), append an entry to:
+Before reporting your result to the user (or handing off to another agent), append an entry to `agent-progress/[task-slug].md` (create `agent-progress/` if it does not exist). Append only; do not overwrite prior entries. Use the **canonical append template** in [`Documentation/phase-output-contracts.md`](../Documentation/phase-output-contracts.md) § Agent progress log — use the heading `## assumption-reviewer — [ISO timestamp]`. Set **Stage** to Stage 1 — Assumption Review when applicable.
 
-`agent-progress/[task-slug].md`
-
-Rules:
-- If the `agent-progress/` folder does not exist, create it.
-- If the file already exists, append; do not overwrite prior entries.
-- If the project uses a Memory Bank (`memory-bank/`), you may also update it, but the `agent-progress/` entry is still required.
-
-Use this exact section template:
-
-```markdown
-## assumption-reviewer — [ISO timestamp]
-
-**Task:** [one-line description]
-**Status:** Complete | Blocked | Partial
-**Stage (if in pipeline):** Stage 1 — Assumption Review
-
-### Actions Taken
-- [what you did]
-
-### Files Created or Modified
-- `path/to/doc.md` — [what changed]
-
-### Outcome
-[findings summary and what was handed off]
-
-### Blockers / Open Questions
-[items or "None"]
-
-### Suggested Next Step
-[next agent/action]
-```
+If the project uses a Memory Bank (`memory-bank/`), you may also update it; the `agent-progress/` entry is still required.
