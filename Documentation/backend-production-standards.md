@@ -1,5 +1,7 @@
 # Backend Production Standards
 
+> **DEPRECATED** — Production standards are now inlined in each language-specific skill with framework-appropriate code examples. See: `skills/impl-python/`, `skills/impl-typescript-backend/`, `skills/impl-csharp/`, `skills/impl-rust/`, `skills/impl-go/`, `skills/impl-java/`. This file is kept for reference only.
+
 This document defines the mandatory patterns that every backend implementation must follow, regardless of language or framework. These are enforced as quality gates by `code-review-sentinel` and `backend-unit-test-specialist`.
 
 ---

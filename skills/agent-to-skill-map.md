@@ -1,56 +1,48 @@
-# Agent To Skill Map
+# Agent to Skill Map
 
-This map records which reusable skills were extracted from each existing agent.
+This map records which skill each agent references for its procedure, standards, and output contract.
 
-## Skill Coverage
+## Mapping
 
-| Source agent | Extracted skills |
-|---|---|
-| `architect-planner` | `architecture-backlog-planning` |
-| `assumption-reviewer` | `assumption-review` |
-| `pbi-clarifier` | `requirements-clarification` |
-| `system-reverse-engineer` | `system-reconstruction` |
-| `typescript-implementer` | `implementation-routing` |
-| `typescript-backend-implementer` | `implementation-from-spec` |
-| `typescript-frontend-implementer` | `frontend-ui-delivery` |
-| `angular-implementer` | `frontend-ui-delivery` |
-| `nextjs-skeleton-expert` | `frontend-ui-delivery` |
-| `sveltekit-skeleton-expert` | `frontend-ui-delivery` |
-| `java-implementer` | `implementation-from-spec` |
-| `csharp-implementer` | `implementation-from-spec` |
-| `python-implementer` | `implementation-from-spec` |
-| `go-implementer` | `implementation-from-spec` |
-| `rust-implementer` | `implementation-from-spec` |
-| `backend-unit-test-specialist` | `test-generation` |
-| `frontend-unit-test-specialist` | `test-generation` |
-| `ui-test-specialist` | `test-generation` |
-| `code-review-sentinel` | `code-review-gate` |
-| `ui-ux-sentinel` | `ui-ux-review` |
-| `code-documenter` | `code-documentation` |
-| `markdown-technical-writer` | `docs-config-authoring` |
-| `docker-architect` | `containerization-and-env` |
-| `graphql-specialist` | `data-query-specialists` |
-| `sql-specialist` | `data-query-specialists` |
-| `mongodb-specialist` | `data-query-specialists` |
-| `redis-specialist` | `data-query-specialists` |
-| `idea-validator` | `business-idea-validation` |
-| `orchestrator` | `workflow-orchestration` |
-| `wiki-update-agent` | `wiki-update-generation` |
+| Agent | Skill | Phase |
+|---|---|---|
+| `orchestrator` | _(standalone agent — no skill)_ | all |
+| `assumption-reviewer` | `assumption-review` | 1 |
+| `architect-planner` | `architecture-planning` | 2 |
+| `pbi-clarifier` | `requirements-clarification` | 3 |
+| `implementation-spec` | `implementation-spec` | 3.5 |
+| `system-reverse-engineer` | `system-reconstruction` | 0.5 |
+| `typescript-implementer` | `implementation-routing` | 4 |
+| `typescript-backend-implementer` | `impl-typescript-backend` | 4 |
+| `python-implementer` | `impl-python` | 4 |
+| `csharp-implementer` | `impl-csharp` | 4 |
+| `rust-implementer` | `impl-rust` | 4 |
+| `go-implementer` | `impl-go` | 4 |
+| `java-implementer` | `impl-java` | 4 |
+| `nextjs-skeleton-expert` | `impl-nextjs` | 4 |
+| `sveltekit-skeleton-expert` | `impl-sveltekit` | 4 |
+| `angular-implementer` | `impl-angular` | 4 |
+| `typescript-frontend-implementer` | `impl-typescript-frontend` | 4 |
+| `ui-ux-sentinel` | `ui-ux-review` | 4.5 |
+| `backend-unit-test-specialist` | `test-backend-unit` | 5a |
+| `frontend-unit-test-specialist` | `test-frontend-unit` | 5b |
+| `ui-test-specialist` | `test-e2e-ui` | 5c |
+| `code-documenter` | `code-documentation` | 6 |
+| `markdown-technical-writer` | `docs-config-authoring` | 6 |
+| `appsec-sentinel` | `appsec-audit` | 7a |
+| `code-review-sentinel` | `code-review` | 7b |
+| `wiki-update-agent` | `wiki-update` | 7.5 |
+| `docker-architect` | `containerization` | infra |
+| `idea-validator` | `business-idea-validation` | — |
+| `graphql-specialist` | `data-graphql` | 4 |
+| `sql-specialist` | `data-sql` | 4 |
+| `mongodb-specialist` | `data-mongodb` | 4 |
+| `redis-specialist` | `data-redis` | 4 |
 
-## Intentionally Excluded From Skills
+## Design Notes
 
-The following agent features were not copied into skill frontmatter because they are orchestration concerns rather than reusable procedures:
-
-- `handoffs`
-- `tools`
-- `model`
-- `color`
-- repo-specific progress logging templates in `agent-progress/`
-
-## Notes
-
-- The map records behaviors extracted from agent body content and companion docs. It does not treat handoffs as extracted skill behavior.
-- Frontend framework specialization was deduplicated into one `frontend-ui-delivery` skill, but that skill preserves explicit Angular, Next.js, and SvelteKit subsections instead of flattening them into generic UI advice.
-- Language implementers were deduplicated into `implementation-routing` plus `implementation-from-spec`: one skill for specialist routing policy, one for multi-language spec-to-code delivery.
-- Documentation was split back into `code-documentation` and `docs-config-authoring` so source-code docs and non-code authoring remain separate discovery surfaces.
-- Database specialists were merged into one `data-query-specialists` skill with engine detection and performance-review workflow.
+- The **orchestrator** is the only agent without a skill — it is the pipeline controller, not a specialist.
+- Each agent file is a **thin wrapper** (~30-40 lines): frontmatter (name, tools, handoffs, model, color) + role identity + skill reference link + progress log instructions.
+- All procedure, standards, and output contracts live in skills. Agents do not duplicate them.
+- Skills in the same phase family share an **identical output contract** template.
+- Previous consolidated skills (`implementation-from-spec`, `frontend-ui-delivery`, `data-query-specialists`, `test-generation`) have been split into language/framework/engine-specific skills where standards differ materially.

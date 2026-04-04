@@ -1,5 +1,7 @@
 # Phase output contracts
 
+> **DEPRECATED** — Output contracts are now inlined in each skill's `## Output Contract` section. See `skills/*/SKILL.md`. This file is kept for reference only.
+
 Single source of truth for **chat-visible completion reports** and **append-only agent progress logs**. Agents in this repository should follow these contracts so outputs are consistent, auditable, and easy to hand off.
 
 **Related:** Orchestrator pipeline stages and gates are defined in [`../agents/orchestrator.agent.md`](../agents/orchestrator.agent.md).
