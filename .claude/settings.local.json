@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xargs grep:*)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(gh api:*)",
+      "Bash(python3 -c \" import json, sys data = json.load\\(sys.stdin\\) for item in data.get\\('tree', []\\): print\\(f\\\\\"{item['type']}\\\\t{item['path']}\\\\\"\\) \")",
+      "Bash(python3 -c ':*)",
+      "Bash(python3:*)",
+      "Bash(node:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)",
+      "Bash(ls:*)",
+      "Bash(wc -l D:/ai-agent-workflows/agents/*.agent.md)"
+    ]
+  }
+}
