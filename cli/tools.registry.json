@@ -33,6 +33,17 @@
         "linux": "{HOME}/.config/Cursor/User/prompts"
       },
       "localRelativePath": ".cursor/rules"
+    },
+    {
+      "id": "pi",
+      "label": "Pi (pi.dev coding agent)",
+      "adapterId": "pi-agent",
+      "agentsRootByPlatform": {
+        "win32": "{HOME}/.pi/agent/agents",
+        "darwin": "{HOME}/.pi/agent/agents",
+        "linux": "{HOME}/.pi/agent/agents"
+      },
+      "localRelativePath": ".pi/agents"
     }
   ]
 }
