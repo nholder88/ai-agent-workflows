@@ -230,9 +230,17 @@ export function createPiAdapter(): PackAdapter {
       });
     },
 
-    async adaptTemplates(_ctx: AdapterContext): Promise<InstallArtifact[]> {
-      // PI has no templates system equivalent
-      return [];
+    async adaptTemplates(ctx: AdapterContext): Promise<InstallArtifact[]> {
+      // PI uses prompt templates at .pi/prompts/ — install from templates/pi/
+      const piTemplatesDir = path.join(ctx.templatesSourceDir, 'pi');
+      if (!fs.existsSync(piTemplatesDir)) {
+        return [];
+      }
+      return listFilesRecursive(piTemplatesDir).map((abs) => ({
+        kind: 'file' as const,
+        targetSubpath: path.join('.pi', 'prompts', path.basename(abs)),
+        body: fs.readFileSync(abs, 'utf8'),
+      }));
     },
 
     async adaptSkills(ctx: SkillsAdapterContext): Promise<InstallArtifact[]> {

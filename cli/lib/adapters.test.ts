@@ -221,10 +221,33 @@ describe('pi adapter', () => {
     }
   });
 
-  it('adaptTemplates returns empty array (PI has no templates system)', async () => {
+  it('adaptTemplates returns PI prompt templates from templates/pi/', async () => {
     const ctx = { repoRoot, ...resolveRepoPaths(repoRoot) };
     const arts = await createPiAdapter().adaptTemplates(ctx);
-    assert.deepEqual(arts, []);
+    assert.ok(arts.length > 0, 'should find templates/pi/ artifacts');
+    for (const a of arts) {
+      assert.equal(a.kind, 'file');
+      const norm = a.targetSubpath.replace(/\\/g, '/');
+      assert.ok(norm.startsWith('.pi/prompts/'), `expected .pi/prompts/ prefix: ${norm}`);
+    }
+    const names = arts.map((a) => path.basename(a.targetSubpath));
+    assert.ok(names.includes('orchestrator.md'), 'should include orchestrator.md');
+  });
+
+  it('adaptTemplates returns empty array when templates/pi/ does not exist', async () => {
+    const tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'pi-no-templates-'));
+    try {
+      const ctx = {
+        repoRoot,
+        agentsSourceDir: path.join(repoRoot, 'agents'),
+        templatesSourceDir: tmp,
+        skillsSourceDir: path.join(repoRoot, 'skills'),
+      };
+      const arts = await createPiAdapter().adaptTemplates(ctx);
+      assert.deepEqual(arts, []);
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true });
+    }
   });
 
   it('adaptSkills places files under .pi/skills/ prefix', async () => {
