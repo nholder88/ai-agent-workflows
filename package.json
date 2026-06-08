@@ -27,8 +27,7 @@
     "node": ">=20.0.0"
   },
   "publishConfig": {
-    "access": "restricted",
-    "provenance": true
+    "access": "restricted"
   },
   "type": "module",
   "bin": {
