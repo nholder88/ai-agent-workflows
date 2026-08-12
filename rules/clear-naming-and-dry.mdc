@@ -1,0 +1,15 @@
+---
+description: Clear action naming and reuse-before-create
+alwaysApply: true
+---
+
+# Clear naming and DRY
+
+- Function and method names are **verb-first** and name the business action (`checkoutCase`, `retrieveStudentData`, `submitWaiverDecision`).
+- **Ban** vague LLM verbs as primary exports: `materialize`, `hydrate`, `orchestrate`, `assemble` (prefer `load…` / `build…`), `process`, `handle`, `doX`, `performX`.
+- Hide infrastructure from callers (`retrieveStudentData`, not `retrieveStudentDataFromDb`). Adapters own persistence/transport.
+- Keep functions small and single-purpose. Variables name the domain thing they hold.
+- **Before writing new code:** search the owning module and `src/shared/` for an existing method. Prefer reuse or tested extension over parallel copies.
+- Extending shared code: existing tests green (or characterization tests) → failing test for new behavior → implement → re-run affected suite.
+
+Details: `docs/agents/personal-coding-principles.md`, `docs/agents/coding-standards.md`.

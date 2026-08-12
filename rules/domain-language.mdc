@@ -1,0 +1,13 @@
+---
+description: Use ubiquitous domain language from CONTEXT.md glossaries
+alwaysApply: true
+---
+
+# Domain language
+
+- Before naming types, methods, or tests for a domain concept, read `CONTEXT-MAP.md` and the relevant `src/modules/<module>/CONTEXT.md`.
+- Use glossary terms. Prefer names a specialist or brokerage operator could read.
+- If a needed term is missing, **add it to that module’s `CONTEXT.md` in the same change**. Do not invent silent synonyms.
+- Research docs under `research/domain/` are background only; runtime ubiquitous language is the `CONTEXT.md` glossaries.
+
+Agent consumption policy: `docs/agents/domain.md`.

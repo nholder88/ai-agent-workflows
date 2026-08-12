@@ -1,0 +1,16 @@
+---
+description: Mandatory TDD with functional tests for behavior changes
+alwaysApply: true
+---
+
+# TDD — functional tests required
+
+For every behavior change in this repository:
+
+1. **Red → green → refactor.** Write or extend a failing functional test before production code.
+2. **Functional tests** assert observable outcomes (state, API response, business rule, UI path). Reject tautologies, coverage-only tests, and tests that only assert mocks were called.
+3. **Minimum:** happy path, one negative case, one edge case (Jest). User-visible changes also need Playwright under `e2e/` (or a skipped stub + follow-up OpenSpec change).
+4. **Extend-first:** when changing existing behavior, run and extend the nearest existing tests before editing production code.
+
+Full policy: `openspec/TESTING.md` and `docs/agents/coding-standards.md`.
+Do not mark OpenSpec `tasks.md` items complete until the tests exist and have been run.
