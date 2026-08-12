@@ -50,7 +50,7 @@
   "dependencies": {
     "@inquirer/prompts": "^8.3.2",
     "ajv": "^8.17.1",
-    "tsx": "^4.20.0",
+    "tsx": "^4.22.4",
     "yaml": "^2.8.3"
   },
   "devDependencies": {
