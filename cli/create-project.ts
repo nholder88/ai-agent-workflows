@@ -324,27 +324,36 @@ export async function runCreate(args: CreateArgs): Promise<void> {
   if (ctx.preset) console.log(`  Preset: ${ctx.preset}`);
   console.log('');
 
-  logger.info('create_stub_placeholder', {
-    message: 'Template materialization engine not yet implemented (issue #33)',
-    nextSteps: ['Resolve template specs', 'Materialize project structure', 'Generate AGENTS.md and .cursor/rules', 'Copy workspace skills', 'Apply preset modifications'],
-  });
+  try {
+    const { materializeProject } = await import('./lib/materializer.js');
+    const result = await materializeProject(ctx);
 
-  console.log('[stub] Template materialization engine not yet implemented (issue #33).');
-  console.log('[stub] This is the hook point for future scaffolding logic.');
-  console.log('');
-  console.log('When implemented, this will:');
-  console.log('  1. Resolve template specs from templates/ directory');
-  console.log('  2. Materialize project structure with selected stacks');
-  console.log('  3. Generate AGENTS.md and .cursor/rules');
-  console.log('  4. Copy workspace skills (if not skipped)');
-  console.log('  5. Apply preset modifications (if selected)');
-  console.log('');
-  console.log(`[stub] Would create: ${ctx.outputPath}`);
-  console.log('[ok] Command surface validation complete. See issue #33 for materialization implementation.');
+    console.log('');
+    console.log('✓ Project created successfully!');
+    console.log('');
+    console.log(`  Location: ${result.projectPath}`);
+    console.log(`  Directories: ${result.directoriesCreated}`);
+    console.log(`  Files: ${result.filesCreated}`);
+    console.log('');
+    console.log('Next steps:');
+    console.log(`  cd ${ctx.projectName}`);
+    console.log('  npm install');
+    console.log('  npm run dev');
+    console.log('');
 
-  logger.info('create_complete', {
-    status: 'stub',
-    projectName: ctx.projectName,
-    outputPath: ctx.outputPath,
-  });
+    logger.info('create_complete', {
+      status: 'success',
+      projectName: ctx.projectName,
+      outputPath: ctx.outputPath,
+      directoriesCreated: result.directoriesCreated,
+      filesCreated: result.filesCreated,
+    });
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error('materialization_failed', { error: errorMessage });
+    console.error('');
+    console.error(`Error: ${errorMessage}`);
+    console.error('');
+    process.exit(1);
+  }
 }
