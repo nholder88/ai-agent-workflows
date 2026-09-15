@@ -102,10 +102,10 @@ ai-agent-pack-install create lib my-package
 Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
 
 **Current Status:**  
-Command surface implemented (issue #32). Template materialization, standards artifact generation, and preset system coming in issues #33-#36.
+Command surface (issue #32) and template materialization engine (issue #33) implemented. Preset system and documentation polish coming in issues #35-#36.
 
 ## Status
 
-**Current:** working - 75% complete
+**Current:** working - 85% complete
 
-Core installer, agents, templates, and tests are in place. Create-project scaffolding command surface added (issue #32). Primary remaining work is materialization engine (#33), first npm release, and optional platform installers.
+Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine functional (issues #32-#33). Primary remaining work is preset system (#35), documentation polish (#36), first npm release, and optional platform installers.
