@@ -2,7 +2,22 @@
  * Create-project command handler for scaffolding new projects from templates.
  */
 import * as path from 'node:path';
-import { input, select, confirm, checkbox } from '@inquirer/prompts';
+import { input, select, confirm } from '@inquirer/prompts';
+import { logger } from './lib/logger.js';
+import {
+  loadStackCatalog,
+  getArchetypes,
+  getDefaultStacks,
+  findArchetype,
+  findFrontendStack,
+  findBackendStack,
+  getAvailablePresets,
+  formatFrontendStackChoices,
+  formatBackendStackChoices,
+  getFrontendStackKeys,
+  getBackendStackKeys,
+  type StackCatalog,
+} from './lib/create-project-catalog.js';
 
 export interface CreateContext {
   archetype: string;
@@ -29,39 +44,6 @@ export interface CreateArgs {
   repoRoot: string;
 }
 
-const ARCHETYPES = [
-  { value: 'react', name: 'React — Frontend application with React framework', category: 'frontend' },
-  { value: 'api', name: 'API — Backend service or REST/GraphQL API', category: 'backend' },
-  { value: 'fullstack', name: 'Fullstack — Combined frontend + backend application', category: 'both' },
-  { value: 'library', name: 'Library — Reusable package or module', category: 'library' },
-] as const;
-
-const FRONTEND_STACKS = [
-  { value: 'nextjs', name: 'Next.js — React framework with SSR/SSG' },
-  { value: 'sveltekit', name: 'SvelteKit — Svelte framework' },
-  { value: 'angular', name: 'Angular — Full-featured framework' },
-] as const;
-
-const BACKEND_STACKS = [
-  { value: 'node_nestjs', name: 'Node.js (NestJS) — TypeScript backend framework' },
-  { value: 'python', name: 'Python — FastAPI or Django' },
-  { value: 'go', name: 'Go — High-performance backend' },
-  { value: 'dotnet', name: '.NET — C# backend' },
-  { value: 'java', name: 'Java — Spring Boot' },
-  { value: 'rust', name: 'Rust — Systems-level backend' },
-] as const;
-
-const PRESETS = [
-  { value: 'nigel-react', name: 'Nigel React — Zustand + TanStack Query + Tailwind + Vitest', appliesTo: ['nextjs', 'sveltekit'] },
-] as const;
-
-const DEFAULT_STACKS: Record<string, { frontend?: string; backend?: string }> = {
-  react: { frontend: 'nextjs' },
-  api: { backend: 'node_nestjs' },
-  fullstack: { frontend: 'nextjs', backend: 'node_nestjs' },
-  library: {},
-};
-
 function validateProjectName(name: string): boolean | string {
   if (!name || name.trim() === '') {
     return 'Project name is required';
@@ -75,14 +57,14 @@ function validateProjectName(name: string): boolean | string {
   return true;
 }
 
-function getAvailablePresets(stackKey: string): Array<{ value: string; name: string }> {
-  return PRESETS.filter((p) => p.appliesTo.includes(stackKey as any)).map((p) => ({
-    value: p.value,
-    name: p.name,
-  }));
-}
-
 export async function runCreateInteractive(args: CreateArgs): Promise<CreateContext> {
+  const catalogPath = path.join(args.repoRoot, 'templates', 'shared', 'stack-catalog.yaml');
+  const catalog = loadStackCatalog(catalogPath);
+  const archetypes = getArchetypes();
+  const defaultStacks = getDefaultStacks();
+
+  logger.info('create_wizard_start', { mode: 'interactive' });
+
   console.log('');
   console.log('  AI Agent Workflows — Project Scaffolding');
   console.log('  Create a new project with stack-specific agents and standards.');
@@ -90,11 +72,12 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
 
   const archetype = args.archetype ?? await select({
     message: 'What type of project?',
-    choices: ARCHETYPES.map((a) => ({ value: a.value, name: a.name })),
+    choices: archetypes.map((a) => ({ value: a.value, name: a.name })),
   });
 
-  if (!ARCHETYPES.find((a) => a.value === archetype)) {
-    throw new Error(`Invalid archetype: ${archetype}. Valid: ${ARCHETYPES.map((a) => a.value).join(', ')}`);
+  const archetypeMeta = findArchetype(archetype);
+  if (!archetypeMeta) {
+    throw new Error(`Invalid archetype: ${archetype}. Valid: ${archetypes.map((a) => a.value).join(', ')}`);
   }
 
   const projectName = args.projectName ?? await input({
@@ -108,32 +91,30 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
   let backendStack: string | undefined;
   let stack: string | undefined;
 
-  const archetypeMeta = ARCHETYPES.find((a) => a.value === archetype)!;
-
   if (archetypeMeta.category === 'frontend' || archetype === 'react') {
     frontendStack = args.frontendStack ?? args.stack ?? await select({
       message: 'Choose frontend stack:',
-      choices: FRONTEND_STACKS,
-      default: DEFAULT_STACKS[archetype]?.frontend,
+      choices: formatFrontendStackChoices(catalog),
+      default: defaultStacks[archetype]?.frontend,
     });
     stack = frontendStack;
   } else if (archetypeMeta.category === 'backend' || archetype === 'api') {
     backendStack = args.backendStack ?? args.stack ?? await select({
       message: 'Choose backend stack:',
-      choices: BACKEND_STACKS,
-      default: DEFAULT_STACKS[archetype]?.backend,
+      choices: formatBackendStackChoices(catalog),
+      default: defaultStacks[archetype]?.backend,
     });
     stack = backendStack;
   } else if (archetypeMeta.category === 'both' || archetype === 'fullstack') {
     frontendStack = args.frontendStack ?? await select({
       message: 'Choose frontend stack:',
-      choices: FRONTEND_STACKS,
-      default: DEFAULT_STACKS.fullstack.frontend,
+      choices: formatFrontendStackChoices(catalog),
+      default: defaultStacks.fullstack.frontend,
     });
     backendStack = args.backendStack ?? await select({
       message: 'Choose backend stack:',
-      choices: BACKEND_STACKS,
-      default: DEFAULT_STACKS.fullstack.backend,
+      choices: formatBackendStackChoices(catalog),
+      default: defaultStacks.fullstack.backend,
     });
   }
 
@@ -144,7 +125,7 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
     if (availablePresets.length > 0 && !args.yes) {
       const presetChoices = [
         { value: 'none', name: 'None — Use base template defaults' },
-        ...availablePresets,
+        ...availablePresets.map((p) => ({ value: p.value, name: p.name })),
       ];
       const presetChoice = args.preset ?? await select({
         message: 'Apply preset? (optional)',
@@ -186,9 +167,20 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
 
     if (!proceed) {
       console.log('Cancelled.');
+      logger.info('create_wizard_cancelled', { archetype, projectName });
       process.exit(0);
     }
   }
+
+  logger.info('create_wizard_complete', {
+    archetype,
+    projectName,
+    outputPath,
+    frontendStack,
+    backendStack,
+    preset,
+    skipSkills,
+  });
 
   return {
     archetype,
@@ -204,13 +196,20 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
 }
 
 export function validateCreateArgs(args: CreateArgs): CreateContext {
+  const catalogPath = path.join(args.repoRoot, 'templates', 'shared', 'stack-catalog.yaml');
+  const catalog = loadStackCatalog(catalogPath);
+  const archetypes = getArchetypes();
+  const defaultStacks = getDefaultStacks();
+
+  logger.info('create_validation_start', { mode: 'non-interactive' });
+
   if (!args.archetype) {
-    throw new Error(`archetype is required in non-interactive mode. Valid: ${ARCHETYPES.map((a) => a.value).join(', ')}`);
+    throw new Error(`archetype is required in non-interactive mode. Valid: ${archetypes.map((a) => a.value).join(', ')}`);
   }
 
-  const archetypeMeta = ARCHETYPES.find((a) => a.value === args.archetype);
+  const archetypeMeta = findArchetype(args.archetype);
   if (!archetypeMeta) {
-    throw new Error(`Unknown archetype "${args.archetype}". Valid: ${ARCHETYPES.map((a) => a.value).join(', ')}`);
+    throw new Error(`Unknown archetype "${args.archetype}". Valid: ${archetypes.map((a) => a.value).join(', ')}`);
   }
 
   if (!args.projectName) {
@@ -229,34 +228,32 @@ export function validateCreateArgs(args: CreateArgs): CreateContext {
   let stack: string | undefined;
 
   if (archetypeMeta.category === 'frontend' || args.archetype === 'react') {
-    frontendStack = args.frontendStack ?? args.stack ?? DEFAULT_STACKS[args.archetype]?.frontend;
+    frontendStack = args.frontendStack ?? args.stack ?? defaultStacks[args.archetype]?.frontend;
     if (!frontendStack) {
-      throw new Error(`frontend stack is required for frontend/react archetype. Valid: ${FRONTEND_STACKS.map((s) => s.value).join(', ')}`);
+      throw new Error(`frontend stack is required for frontend/react archetype. Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
-    const validStack = FRONTEND_STACKS.find((s) => s.value === frontendStack);
-    if (!validStack) {
-      throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${FRONTEND_STACKS.map((s) => s.value).join(', ')}`);
+    if (!findFrontendStack(catalog, frontendStack)) {
+      throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
     stack = frontendStack;
   } else if (archetypeMeta.category === 'backend' || args.archetype === 'api') {
-    backendStack = args.backendStack ?? args.stack ?? DEFAULT_STACKS[args.archetype]?.backend;
+    backendStack = args.backendStack ?? args.stack ?? defaultStacks[args.archetype]?.backend;
     if (!backendStack) {
-      throw new Error(`backend stack is required for backend/api archetype. Valid: ${BACKEND_STACKS.map((s) => s.value).join(', ')}`);
+      throw new Error(`backend stack is required for backend/api archetype. Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
-    const validStack = BACKEND_STACKS.find((s) => s.value === backendStack);
-    if (!validStack) {
-      throw new Error(`Unknown backend stack "${backendStack}". Valid: ${BACKEND_STACKS.map((s) => s.value).join(', ')}`);
+    if (!findBackendStack(catalog, backendStack)) {
+      throw new Error(`Unknown backend stack "${backendStack}". Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
     stack = backendStack;
   } else if (archetypeMeta.category === 'both' || args.archetype === 'fullstack') {
-    frontendStack = args.frontendStack ?? DEFAULT_STACKS.fullstack.frontend;
-    backendStack = args.backendStack ?? DEFAULT_STACKS.fullstack.backend;
+    frontendStack = args.frontendStack ?? defaultStacks.fullstack.frontend;
+    backendStack = args.backendStack ?? defaultStacks.fullstack.backend;
 
-    if (!FRONTEND_STACKS.find((s) => s.value === frontendStack)) {
-      throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${FRONTEND_STACKS.map((s) => s.value).join(', ')}`);
+    if (!findFrontendStack(catalog, frontendStack!)) {
+      throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
-    if (!BACKEND_STACKS.find((s) => s.value === backendStack)) {
-      throw new Error(`Unknown backend stack "${backendStack}". Valid: ${BACKEND_STACKS.map((s) => s.value).join(', ')}`);
+    if (!findBackendStack(catalog, backendStack!)) {
+      throw new Error(`Unknown backend stack "${backendStack}". Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
   }
 
@@ -271,6 +268,15 @@ export function validateCreateArgs(args: CreateArgs): CreateContext {
       }
     }
   }
+
+  logger.info('create_validation_complete', {
+    archetype: args.archetype,
+    projectName: args.projectName,
+    outputPath,
+    frontendStack,
+    backendStack,
+    preset,
+  });
 
   return {
     archetype: args.archetype,
@@ -290,11 +296,23 @@ export async function runCreate(args: CreateArgs): Promise<void> {
   try {
     ctx = args.yes ? validateCreateArgs(args) : await runCreateInteractive(args);
   } catch (err) {
-    console.error(`Error: ${err instanceof Error ? err.message : err}`);
+    const errorMessage = err instanceof Error ? err.message : String(err);
+    logger.error('create_validation_failed', { error: errorMessage });
+    console.error(`Error: ${errorMessage}`);
     console.error('Usage: ai-agent-pack-install create <archetype> <name> [options]');
     console.error('Run with --help for more information.');
     process.exit(1);
   }
+
+  logger.info('create_start', {
+    projectName: ctx.projectName,
+    outputPath: ctx.outputPath,
+    archetype: ctx.archetype,
+    frontendStack: ctx.frontendStack,
+    backendStack: ctx.backendStack,
+    preset: ctx.preset,
+    skipSkills: ctx.skipSkills,
+  });
 
   console.log('');
   console.log(`Creating project: ${ctx.projectName}`);
@@ -305,6 +323,11 @@ export async function runCreate(args: CreateArgs): Promise<void> {
   if (ctx.stack && !ctx.frontendStack && !ctx.backendStack) console.log(`  Stack: ${ctx.stack}`);
   if (ctx.preset) console.log(`  Preset: ${ctx.preset}`);
   console.log('');
+
+  logger.info('create_stub_placeholder', {
+    message: 'Template materialization engine not yet implemented (issue #33)',
+    nextSteps: ['Resolve template specs', 'Materialize project structure', 'Generate AGENTS.md and .cursor/rules', 'Copy workspace skills', 'Apply preset modifications'],
+  });
 
   console.log('[stub] Template materialization engine not yet implemented (issue #33).');
   console.log('[stub] This is the hook point for future scaffolding logic.');
@@ -318,4 +341,10 @@ export async function runCreate(args: CreateArgs): Promise<void> {
   console.log('');
   console.log(`[stub] Would create: ${ctx.outputPath}`);
   console.log('[ok] Command surface validation complete. See issue #33 for materialization implementation.');
+
+  logger.info('create_complete', {
+    status: 'stub',
+    projectName: ctx.projectName,
+    outputPath: ctx.outputPath,
+  });
 }

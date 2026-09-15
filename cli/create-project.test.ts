@@ -1,6 +1,11 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { validateCreateArgs, type CreateArgs } from './create-project.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..');
 
 describe('create-project argument validation', () => {
   const baseArgs: CreateArgs = {
@@ -13,7 +18,7 @@ describe('create-project argument validation', () => {
     preset: null,
     skipSkills: false,
     yes: true,
-    repoRoot: '/test/repo',
+    repoRoot,
   };
 
   it('validates react archetype with defaults', () => {
