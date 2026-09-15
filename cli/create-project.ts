@@ -91,30 +91,30 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
   let backendStack: string | undefined;
   let stack: string | undefined;
 
-  if (archetypeMeta.category === 'frontend' || archetype === 'react') {
+  if (archetypeMeta.requiresFrontendStack && !archetypeMeta.requiresBackendStack) {
     frontendStack = args.frontendStack ?? args.stack ?? await select({
       message: 'Choose frontend stack:',
       choices: formatFrontendStackChoices(catalog),
       default: defaultStacks[archetype]?.frontend,
     });
     stack = frontendStack;
-  } else if (archetypeMeta.category === 'backend' || archetype === 'api') {
+  } else if (archetypeMeta.requiresBackendStack && !archetypeMeta.requiresFrontendStack) {
     backendStack = args.backendStack ?? args.stack ?? await select({
       message: 'Choose backend stack:',
       choices: formatBackendStackChoices(catalog),
       default: defaultStacks[archetype]?.backend,
     });
     stack = backendStack;
-  } else if (archetypeMeta.category === 'both' || archetype === 'fullstack') {
+  } else if (archetypeMeta.requiresFrontendStack && archetypeMeta.requiresBackendStack) {
     frontendStack = args.frontendStack ?? await select({
       message: 'Choose frontend stack:',
       choices: formatFrontendStackChoices(catalog),
-      default: defaultStacks.fullstack.frontend,
+      default: defaultStacks[archetype]?.frontend,
     });
     backendStack = args.backendStack ?? await select({
       message: 'Choose backend stack:',
       choices: formatBackendStackChoices(catalog),
-      default: defaultStacks.fullstack.backend,
+      default: defaultStacks[archetype]?.backend,
     });
   }
 
@@ -227,32 +227,32 @@ export function validateCreateArgs(args: CreateArgs): CreateContext {
   let backendStack: string | undefined;
   let stack: string | undefined;
 
-  if (archetypeMeta.category === 'frontend' || args.archetype === 'react') {
+  if (archetypeMeta.requiresFrontendStack && !archetypeMeta.requiresBackendStack) {
     frontendStack = args.frontendStack ?? args.stack ?? defaultStacks[args.archetype]?.frontend;
     if (!frontendStack) {
-      throw new Error(`frontend stack is required for frontend/react archetype. Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
+      throw new Error(`frontend stack is required for frontend archetype. Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
     if (!findFrontendStack(catalog, frontendStack)) {
       throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
     stack = frontendStack;
-  } else if (archetypeMeta.category === 'backend' || args.archetype === 'api') {
+  } else if (archetypeMeta.requiresBackendStack && !archetypeMeta.requiresFrontendStack) {
     backendStack = args.backendStack ?? args.stack ?? defaultStacks[args.archetype]?.backend;
     if (!backendStack) {
-      throw new Error(`backend stack is required for backend/api archetype. Valid: ${getBackendStackKeys(catalog).join(', ')}`);
+      throw new Error(`backend stack is required for backend archetype. Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
     if (!findBackendStack(catalog, backendStack)) {
       throw new Error(`Unknown backend stack "${backendStack}". Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
     stack = backendStack;
-  } else if (archetypeMeta.category === 'both' || args.archetype === 'fullstack') {
-    frontendStack = args.frontendStack ?? defaultStacks.fullstack.frontend;
-    backendStack = args.backendStack ?? defaultStacks.fullstack.backend;
+  } else if (archetypeMeta.requiresFrontendStack && archetypeMeta.requiresBackendStack) {
+    frontendStack = args.frontendStack ?? defaultStacks[args.archetype]?.frontend;
+    backendStack = args.backendStack ?? defaultStacks[args.archetype]?.backend;
 
-    if (!findFrontendStack(catalog, frontendStack!)) {
+    if (!frontendStack || !findFrontendStack(catalog, frontendStack)) {
       throw new Error(`Unknown frontend stack "${frontendStack}". Valid: ${getFrontendStackKeys(catalog).join(', ')}`);
     }
-    if (!findBackendStack(catalog, backendStack!)) {
+    if (!backendStack || !findBackendStack(catalog, backendStack)) {
       throw new Error(`Unknown backend stack "${backendStack}". Valid: ${getBackendStackKeys(catalog).join(', ')}`);
     }
   }

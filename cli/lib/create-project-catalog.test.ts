@@ -33,9 +33,11 @@ describe('create-project-catalog', () => {
   it('returns valid archetypes', () => {
     const archetypes = getArchetypes();
     assert.ok(archetypes.length > 0);
-    assert.ok(archetypes.find((a) => a.value === 'react'));
-    assert.ok(archetypes.find((a) => a.value === 'api'));
+    assert.ok(archetypes.find((a) => a.value === 'frontend'));
+    assert.ok(archetypes.find((a) => a.value === 'backend'));
     assert.ok(archetypes.find((a) => a.value === 'fullstack'));
+    assert.ok(archetypes.find((a) => a.value === 'lib'));
+    assert.ok(archetypes.find((a) => a.value === 'cli'));
   });
 
   it('returns valid presets', () => {
@@ -46,16 +48,16 @@ describe('create-project-catalog', () => {
 
   it('returns default stacks', () => {
     const defaults = getDefaultStacks();
-    assert.strictEqual(defaults.react.frontend, 'nextjs');
-    assert.strictEqual(defaults.api.backend, 'node_nestjs');
+    assert.strictEqual(defaults.frontend.frontend, 'nextjs');
+    assert.strictEqual(defaults.backend.backend, 'node_nestjs');
     assert.strictEqual(defaults.fullstack.frontend, 'nextjs');
     assert.strictEqual(defaults.fullstack.backend, 'node_nestjs');
   });
 
   it('finds archetype by value', () => {
-    const archetype = findArchetype('react');
+    const archetype = findArchetype('frontend');
     assert.ok(archetype);
-    assert.strictEqual(archetype.value, 'react');
+    assert.strictEqual(archetype.value, 'frontend');
     assert.strictEqual(archetype.category, 'frontend');
   });
 

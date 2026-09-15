@@ -195,14 +195,15 @@ Run without arguments for an interactive wizard, or provide archetype and name
 for non-interactive usage.
 
 Examples:
-  ai-agent-pack-install create                  Interactive wizard
-  ai-agent-pack-install create react my-app     React project with defaults
-  ai-agent-pack-install create api billing-service   Backend API project
+  ai-agent-pack-install create                     Interactive wizard
+  ai-agent-pack-install create frontend my-app     Frontend project with defaults
+  ai-agent-pack-install create backend api-service Backend API project
   ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
+  ai-agent-pack-install create cli my-tool         CLI tool project
 
 Create Options:
   create                Start create mode (required for scaffolding)
-  <archetype>           Project archetype: react, api, fullstack, library
+  <archetype>           Project archetype: frontend, backend, fullstack, lib, cli
   <name>                Project name (will be directory name)
   --archetype <type>    Explicit archetype (alternative to positional)
   --output <path>       Output directory [default: ./<name>]

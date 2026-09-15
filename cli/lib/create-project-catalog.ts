@@ -9,7 +9,9 @@ import YAML from 'yaml';
 export interface ArchetypeDefinition {
   readonly value: string;
   readonly name: string;
-  readonly category: 'frontend' | 'backend' | 'both' | 'library';
+  readonly category: 'frontend' | 'backend' | 'both' | 'library' | 'cli';
+  readonly requiresFrontendStack?: boolean;
+  readonly requiresBackendStack?: boolean;
 }
 
 export interface StackDefinition {
@@ -34,10 +36,11 @@ export interface StackCatalog {
 }
 
 const ARCHETYPES: readonly ArchetypeDefinition[] = [
-  { value: 'react', name: 'React — Frontend application with React framework', category: 'frontend' },
-  { value: 'api', name: 'API — Backend service or REST/GraphQL API', category: 'backend' },
-  { value: 'fullstack', name: 'Fullstack — Combined frontend + backend application', category: 'both' },
-  { value: 'library', name: 'Library — Reusable package or module', category: 'library' },
+  { value: 'frontend', name: 'Frontend — Browser-based UI application', category: 'frontend', requiresFrontendStack: true },
+  { value: 'backend', name: 'Backend — API service or backend application', category: 'backend', requiresBackendStack: true },
+  { value: 'fullstack', name: 'Fullstack — Combined frontend + backend application', category: 'both', requiresFrontendStack: true, requiresBackendStack: true },
+  { value: 'lib', name: 'Library — Reusable package or module', category: 'library' },
+  { value: 'cli', name: 'CLI — Command-line tool or utility', category: 'cli' },
 ] as const;
 
 const PRESETS: readonly PresetDefinition[] = [
@@ -45,10 +48,11 @@ const PRESETS: readonly PresetDefinition[] = [
 ] as const;
 
 const DEFAULT_STACKS: Readonly<Record<string, { frontend?: string; backend?: string }>> = {
-  react: { frontend: 'nextjs' },
-  api: { backend: 'node_nestjs' },
+  frontend: { frontend: 'nextjs' },
+  backend: { backend: 'node_nestjs' },
   fullstack: { frontend: 'nextjs', backend: 'node_nestjs' },
-  library: {},
+  lib: {},
+  cli: {},
 } as const;
 
 export function loadStackCatalog(catalogPath: string): StackCatalog {

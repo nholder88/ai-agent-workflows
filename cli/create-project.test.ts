@@ -21,29 +21,29 @@ describe('create-project argument validation', () => {
     repoRoot,
   };
 
-  it('validates react archetype with defaults', () => {
+  it('validates frontend archetype with defaults', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
     };
 
     const ctx = validateCreateArgs(args);
-    assert.strictEqual(ctx.archetype, 'react');
+    assert.strictEqual(ctx.archetype, 'frontend');
     assert.strictEqual(ctx.projectName, 'my-app');
     assert.strictEqual(ctx.frontendStack, 'nextjs');
     assert.strictEqual(ctx.stack, 'nextjs');
   });
 
-  it('validates api archetype with defaults', () => {
+  it('validates backend archetype with defaults', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'api',
+      archetype: 'backend',
       projectName: 'my-service',
     };
 
     const ctx = validateCreateArgs(args);
-    assert.strictEqual(ctx.archetype, 'api');
+    assert.strictEqual(ctx.archetype, 'backend');
     assert.strictEqual(ctx.projectName, 'my-service');
     assert.strictEqual(ctx.backendStack, 'node_nestjs');
     assert.strictEqual(ctx.stack, 'node_nestjs');
@@ -62,10 +62,10 @@ describe('create-project argument validation', () => {
     assert.strictEqual(ctx.backendStack, 'node_nestjs');
   });
 
-  it('validates react archetype with explicit stack', () => {
+  it('validates frontend archetype with explicit stack', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
       stack: 'sveltekit',
     };
@@ -122,7 +122,7 @@ describe('create-project argument validation', () => {
   it('fails with invalid project name (spaces)', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my app',
     };
 
@@ -132,7 +132,7 @@ describe('create-project argument validation', () => {
   it('fails with invalid project name (special chars)', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my@app',
     };
 
@@ -142,7 +142,7 @@ describe('create-project argument validation', () => {
   it('fails with invalid frontend stack', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
       stack: 'invalid-stack',
     };
@@ -153,7 +153,7 @@ describe('create-project argument validation', () => {
   it('fails with invalid backend stack', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'api',
+      archetype: 'backend',
       projectName: 'my-service',
       stack: 'invalid-stack',
     };
@@ -164,7 +164,7 @@ describe('create-project argument validation', () => {
   it('validates preset for applicable stack', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
       preset: 'nigel-react',
     };
@@ -176,7 +176,7 @@ describe('create-project argument validation', () => {
   it('fails with preset for non-applicable stack', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'api',
+      archetype: 'backend',
       projectName: 'my-service',
       preset: 'nigel-react',
     };
@@ -184,10 +184,38 @@ describe('create-project argument validation', () => {
     assert.throws(() => validateCreateArgs(args));
   });
 
+  it('validates lib archetype without stacks', () => {
+    const args: CreateArgs = {
+      ...baseArgs,
+      archetype: 'lib',
+      projectName: 'my-lib',
+    };
+
+    const ctx = validateCreateArgs(args);
+    assert.strictEqual(ctx.archetype, 'lib');
+    assert.strictEqual(ctx.projectName, 'my-lib');
+    assert.strictEqual(ctx.frontendStack, undefined);
+    assert.strictEqual(ctx.backendStack, undefined);
+  });
+
+  it('validates cli archetype without stacks', () => {
+    const args: CreateArgs = {
+      ...baseArgs,
+      archetype: 'cli',
+      projectName: 'my-tool',
+    };
+
+    const ctx = validateCreateArgs(args);
+    assert.strictEqual(ctx.archetype, 'cli');
+    assert.strictEqual(ctx.projectName, 'my-tool');
+    assert.strictEqual(ctx.frontendStack, undefined);
+    assert.strictEqual(ctx.backendStack, undefined);
+  });
+
   it('resolves output path from project name', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
     };
 
@@ -198,7 +226,7 @@ describe('create-project argument validation', () => {
   it('uses explicit output path', () => {
     const args: CreateArgs = {
       ...baseArgs,
-      archetype: 'react',
+      archetype: 'frontend',
       projectName: 'my-app',
       outputPath: '/custom/path',
     };
