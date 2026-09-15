@@ -1,6 +1,16 @@
 /**
  * Domain models and catalog for create-project scaffolding.
- * Loads stack definitions from templates/shared/stack-catalog.yaml.
+ * 
+ * CATALOG CONTRACT:
+ * templates/shared/stack-catalog.yaml is the single allowlist of scaffolds this CLI may offer.
+ * 
+ * - Stack choices MUST be loaded from the catalog (not hardcoded framework lists)
+ * - A stack appears in CLI only if it has standards/templates backing in this repo
+ * - To add new options: create standards/templates first, then add catalog entry
+ * - Archetypes (frontend/backend/fullstack/lib/cli) are top-level; stacks are subdivisions
+ * - This repo owns Autocode engineering standards; Hermes owns provider/model config
+ * 
+ * See docs/create-project-catalog-contract.md for full contract specification.
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';

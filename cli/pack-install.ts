@@ -191,6 +191,9 @@ Install Options:
 CREATE MODE:
 Scaffold a new project from templates with stack-specific agents and standards.
 
+Stack options are loaded from templates/shared/stack-catalog.yaml (the single
+allowlist). Available stacks have complete standards/templates backing in this repo.
+
 Run without arguments for an interactive wizard, or provide archetype and name
 for non-interactive usage.
 
@@ -207,9 +210,9 @@ Create Options:
   <name>                Project name (will be directory name)
   --archetype <type>    Explicit archetype (alternative to positional)
   --output <path>       Output directory [default: ./<name>]
-  --stack <key>         Stack key for single-stack archetypes
-  --frontend <key>      Frontend stack for fullstack archetype (e.g. nextjs)
-  --backend <key>       Backend stack for fullstack archetype (e.g. python)
+  --stack <key>         Stack key for single-stack archetypes (from catalog)
+  --frontend <key>      Frontend stack for fullstack (from catalog: nextjs, sveltekit, angular)
+  --backend <key>       Backend stack for fullstack (from catalog: node_nestjs, python, go, etc.)
   --preset <name>       Apply opinionated preset (e.g. nigel-react)
   --skip-skills         Skip copying workspace skills
   --yes, -y             Non-interactive mode with defaults
