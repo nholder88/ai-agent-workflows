@@ -167,4 +167,44 @@ describe('materializeProject', () => {
     assert.ok(cursorRules.includes('TanStack Query'));
     assert.ok(cursorRules.includes('Zustand'));
   });
+
+  it('should generate Python requirements.txt for Python backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-python-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-python-backend'),
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')));
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+
+    const requirements = fs.readFileSync(path.join(ctx.outputPath, 'requirements.txt'), 'utf8');
+    assert.ok(requirements.includes('fastapi'));
+    assert.ok(!requirements.includes('react'));
+  });
+
+  it('should generate go.mod for Go backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-go-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-go-backend'),
+      backendStack: 'go',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'go.mod')));
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+
+    const goMod = fs.readFileSync(path.join(ctx.outputPath, 'go.mod'), 'utf8');
+    assert.ok(goMod.includes('test-go-backend'));
+    assert.ok(goMod.includes('fiber'));
+  });
 });

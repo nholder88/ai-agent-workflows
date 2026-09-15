@@ -80,6 +80,10 @@ export async function runCreateInteractive(args: CreateArgs): Promise<CreateCont
     throw new Error(`Invalid archetype: ${archetype}. Valid: ${archetypes.map((a) => a.value).join(', ')}`);
   }
 
+  if (archetypeMeta.value === 'lib' || archetypeMeta.value === 'cli') {
+    throw new Error(`Archetype "${archetypeMeta.value}" is not yet implemented. Currently supported: frontend, backend, fullstack`);
+  }
+
   const projectName = args.projectName ?? await input({
     message: 'Project name:',
     validate: (val) => validateProjectName(val),
@@ -210,6 +214,10 @@ export function validateCreateArgs(args: CreateArgs): CreateContext {
   const archetypeMeta = findArchetype(args.archetype);
   if (!archetypeMeta) {
     throw new Error(`Unknown archetype "${args.archetype}". Valid: ${archetypes.map((a) => a.value).join(', ')}`);
+  }
+
+  if (archetypeMeta.value === 'lib' || archetypeMeta.value === 'cli') {
+    throw new Error(`Archetype "${archetypeMeta.value}" is not yet implemented. Currently supported: frontend, backend, fullstack`);
   }
 
   if (!args.projectName) {

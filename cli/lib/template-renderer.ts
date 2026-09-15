@@ -2,6 +2,7 @@
  * Template renderer for variable substitution in template files.
  */
 import type { ResolvedContext } from './resolver.js';
+import type { CreateContext } from '../create-project.js';
 import { logger } from './logger.js';
 
 export interface TemplateVariables {
@@ -24,6 +25,7 @@ export interface TemplateVariables {
   e2eTestCommand?: string;
   unitTestFramework?: string;
   e2eTestFramework?: string;
+  createContext: CreateContext;
 }
 
 export function buildTemplateVariables(resolved: ResolvedContext): TemplateVariables {
@@ -48,6 +50,7 @@ export function buildTemplateVariables(resolved: ResolvedContext): TemplateVaria
     timestamp: new Date().toISOString(),
     contractsVersion: resolved.contractsVersion,
     templateVersion: spec.version,
+    createContext: resolved.createContext,
   };
 
   if (spec.state_management) {
@@ -123,71 +126,4 @@ function resolveVariable(key: string, variables: TemplateVariables): unknown {
   }
 
   return value;
-}
-
-/**
- * Generate a minimal package.json for a frontend project.
- */
-export function generatePackageJson(variables: TemplateVariables): string {
-  const pkg = {
-    name: variables.projectName,
-    version: '0.1.0',
-    private: true,
-    type: 'module',
-    scripts: {
-      dev: variables.stackKey === 'nextjs' ? 'next dev' : 'vite dev',
-      build: variables.stackKey === 'nextjs' ? 'next build' : 'vite build',
-      start: variables.stackKey === 'nextjs' ? 'next start' : 'vite preview',
-      'test:unit': variables.unitTestCommand || 'vitest',
-      'test:e2e': variables.e2eTestCommand || 'playwright test',
-    },
-    dependencies: {
-      'react': '^18.3.0',
-      'react-dom': '^18.3.0',
-    },
-    devDependencies: {
-      '@types/react': '^18.3.0',
-      '@types/react-dom': '^18.3.0',
-      'typescript': '^5.0.0',
-    },
-  };
-
-  if (variables.stackKey === 'nextjs') {
-    pkg.dependencies = {
-      ...pkg.dependencies,
-      'next': '^14.0.0',
-    };
-  }
-
-  return JSON.stringify(pkg, null, 2);
-}
-
-/**
- * Generate a minimal tsconfig.json.
- */
-export function generateTsConfig(variables: TemplateVariables): string {
-  const config = {
-    compilerOptions: {
-      target: 'ES2022',
-      lib: ['ES2022', 'DOM', 'DOM.Iterable'],
-      jsx: 'preserve',
-      module: 'ESNext',
-      moduleResolution: 'bundler',
-      resolveJsonModule: true,
-      allowJs: true,
-      strict: true,
-      noEmit: true,
-      esModuleInterop: true,
-      skipLibCheck: true,
-      forceConsistentCasingInFileNames: true,
-      incremental: true,
-      paths: {
-        '@/*': ['./src/*'],
-      },
-    },
-    include: ['src/**/*', 'tests/**/*'],
-    exclude: ['node_modules'],
-  };
-
-  return JSON.stringify(config, null, 2);
 }

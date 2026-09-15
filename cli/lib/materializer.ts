@@ -1,11 +1,19 @@
 /**
  * Materialization orchestrator - generates physical project files from resolved specs.
+ * 
+ * Materialization strategy:
+ * 1. Check for scaffold/ subdirectory in template dir (future extensibility)
+ * 2. Copy .env.example and other static files from template dir
+ * 3. Generate stack-aware manifest files (package.json for frontend, requirements.txt for Python, etc.)
+ * 4. Generate standards artifacts (AGENTS.md, .cursor/rules, conventions.md)
+ * 5. Write to temp directory first, then move atomically (no partial output on failure)
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import * as os from 'node:os';
 import { resolveArchetype, type ResolvedContext } from './resolver.js';
-import { generateFileTree, type FileTree } from './file-tree-generator.js';
-import { buildTemplateVariables, renderTemplate, generatePackageJson, generateTsConfig, type TemplateVariables } from './template-renderer.js';
+import { buildTemplateVariables, renderTemplate, type TemplateVariables } from './template-renderer.js';
+import { generateAgentsMdContent, generateCursorRulesContent, generateConventionsMdContent } from './standards-templates.js';
 import { logger } from './logger.js';
 import type { CreateContext } from '../create-project.js';
 
@@ -20,10 +28,10 @@ export interface MaterializationResult {
  * 
  * Phases:
  * 1. Resolve - Get resolved context with template specs
- * 2. Plan - Generate file tree structure
- * 3. Prepare - Create all directories
- * 4. Materialize - Render and write all files
- * 5. Verify - Check all expected files exist
+ * 2. Prepare - Create temp directory
+ * 3. Materialize - Generate all files in temp
+ * 4. Move - Atomically move temp to final location
+ * 5. Cleanup - Remove temp on success or failure
  */
 export async function materializeProject(ctx: CreateContext): Promise<MaterializationResult> {
   logger.info('materialization_start', {
@@ -31,296 +39,526 @@ export async function materializeProject(ctx: CreateContext): Promise<Materializ
     outputPath: ctx.outputPath,
   });
 
-  const resolved = resolveArchetype(ctx);
-
   validateOutputPath(ctx.outputPath);
 
-  const fileTree = generateFileTree(resolved);
-
-  await createDirectories(ctx.outputPath, fileTree);
-
+  const resolved = resolveArchetype(ctx);
   const variables = buildTemplateVariables(resolved);
 
-  await materializeFiles(ctx.outputPath, fileTree, variables, resolved);
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'create-project-'));
+  let filesCreated = 0;
+  let directoriesCreated = 0;
 
-  await generateStandardsArtifacts(ctx.outputPath, variables, resolved);
+  try {
+    const result = await materializeInTemp(tempDir, resolved, variables);
+    filesCreated = result.filesCreated;
+    directoriesCreated = result.directoriesCreated;
 
-  logger.info('materialization_complete', {
-    projectPath: ctx.outputPath,
-    directoriesCreated: fileTree.directories.length,
-  });
+    if (fs.existsSync(ctx.outputPath)) {
+      fs.rmSync(ctx.outputPath, { recursive: true, force: true });
+    }
 
-  return {
-    projectPath: ctx.outputPath,
-    filesCreated: fileTree.files.length,
-    directoriesCreated: fileTree.directories.length,
-  };
+    fs.mkdirSync(path.dirname(ctx.outputPath), { recursive: true });
+    fs.renameSync(tempDir, ctx.outputPath);
+
+    logger.info('materialization_complete', {
+      projectPath: ctx.outputPath,
+      filesCreated,
+      directoriesCreated,
+    });
+
+    return {
+      projectPath: ctx.outputPath,
+      filesCreated,
+      directoriesCreated,
+    };
+  } catch (err) {
+    logger.error('materialization_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    });
+
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+
+    throw err;
+  }
 }
 
 function validateOutputPath(outputPath: string): void {
   if (fs.existsSync(outputPath)) {
     const files = fs.readdirSync(outputPath);
     if (files.length > 0) {
-      throw new Error(`Output directory is not empty: ${outputPath}. Use --force to overwrite (not yet implemented).`);
+      throw new Error(`Output directory is not empty: ${outputPath}. Please choose an empty directory or remove existing files.`);
     }
   }
 }
 
-async function createDirectories(outputPath: string, fileTree: FileTree): Promise<void> {
-  logger.info('creating_directories', { count: fileTree.directories.length });
+async function materializeInTemp(
+  tempDir: string,
+  resolved: ResolvedContext,
+  variables: TemplateVariables
+): Promise<{ filesCreated: number; directoriesCreated: number }> {
+  let filesCreated = 0;
+  const directoriesCreated = 0;
 
-  for (const dir of fileTree.directories) {
-    const fullPath = path.join(outputPath, dir);
+  const directories = determineDirectories(resolved);
+  for (const dir of directories) {
+    const fullPath = path.join(tempDir, dir);
     if (!fs.existsSync(fullPath)) {
       fs.mkdirSync(fullPath, { recursive: true });
-      logger.debug('directory_created', { path: fullPath });
     }
   }
+
+  if (resolved.frontend) {
+    filesCreated += await materializeFrontendStack(tempDir, resolved.frontend, variables);
+  }
+
+  if (resolved.backend) {
+    filesCreated += await materializeBackendStack(tempDir, resolved.backend, variables);
+  }
+
+  filesCreated += await generateStandardsArtifacts(tempDir, variables);
+
+  return { filesCreated, directoriesCreated: directories.length };
 }
 
-async function materializeFiles(
-  outputPath: string,
-  fileTree: FileTree,
-  variables: TemplateVariables,
-  resolved: ResolvedContext
-): Promise<void> {
-  logger.info('materializing_files', { count: fileTree.files.length });
+function determineDirectories(resolved: ResolvedContext): string[] {
+  const dirs: Set<string> = new Set(['docs', '.cursor', '.github', '.github/workflows']);
 
-  for (const fileNode of fileTree.files) {
-    const targetPath = path.join(outputPath, fileNode.targetPath);
+  if (resolved.frontend) {
+    dirs.add('src');
+    dirs.add('src/app');
+    dirs.add('src/features');
+    dirs.add('src/lib');
+    dirs.add('src/components');
+    dirs.add('tests');
+    dirs.add('tests/unit');
+    dirs.add('tests/e2e');
+    dirs.add('public');
 
-    if (fileNode.type === 'copy' && fileNode.sourcePath) {
-      if (fs.existsSync(fileNode.sourcePath)) {
-        const content = fs.readFileSync(fileNode.sourcePath, 'utf8');
-        fs.writeFileSync(targetPath, content, 'utf8');
-        logger.debug('file_copied', { source: fileNode.sourcePath, target: targetPath });
-      } else {
-        logger.warn('source_file_not_found', { path: fileNode.sourcePath });
+    const spec = resolved.frontend.spec;
+    if (spec.required_routes) {
+      for (const route of spec.required_routes) {
+        const routePath = route.replace(/^\//, '').replace(/\//g, path.sep);
+        if (routePath) {
+          dirs.add(path.join('src', 'app', routePath));
+        }
       }
-    } else if (fileNode.type === 'template' || fileNode.isTemplate) {
-      if (fileNode.targetPath === 'package.json') {
-        const content = generatePackageJson(variables);
-        fs.writeFileSync(targetPath, content, 'utf8');
-        logger.debug('file_generated', { target: targetPath, type: 'package.json' });
-      } else if (fileNode.targetPath === 'tsconfig.json') {
-        const content = generateTsConfig(variables);
-        fs.writeFileSync(targetPath, content, 'utf8');
-        logger.debug('file_generated', { target: targetPath, type: 'tsconfig.json' });
+    }
+
+    const featureFolders = extractFeatureFolders(spec.required_capabilities);
+    for (const feature of featureFolders) {
+      dirs.add(path.join('src', 'features', feature));
+    }
+  }
+
+  if (resolved.backend) {
+    if (!resolved.frontend) {
+      dirs.add('src');
+      dirs.add('tests');
+      dirs.add('tests/unit');
+      dirs.add('tests/e2e');
+    }
+
+    dirs.add('src/api');
+    dirs.add('src/models');
+    dirs.add('src/services');
+
+    const spec = resolved.backend.spec;
+    const serviceFolders = extractFeatureFolders(spec.required_capabilities);
+    for (const service of serviceFolders) {
+      dirs.add(path.join('src', 'services', service));
+    }
+  }
+
+  return Array.from(dirs).sort();
+}
+
+function extractFeatureFolders(capabilities: string[]): Set<string> {
+  const folders = new Set<string>();
+  for (const cap of capabilities) {
+    if (cap.startsWith('CAP-REP-')) {
+      folders.add('reports');
+    } else if (cap.startsWith('CAP-FF-') || cap.startsWith('CAP-ADM-')) {
+      folders.add('admin');
+    }
+  }
+  return folders;
+}
+
+async function materializeFrontendStack(
+  tempDir: string,
+  stack: { stackDef: any; spec: any; templateDir: string },
+  variables: TemplateVariables
+): Promise<number> {
+  let filesCreated = 0;
+
+  const scaffoldDir = path.join(stack.templateDir, 'scaffold');
+  if (fs.existsSync(scaffoldDir)) {
+    filesCreated += await copyScaffoldAssets(scaffoldDir, tempDir, variables);
+  }
+
+  if (stack.stackDef.env) {
+    const envPath = path.join(variables.createContext.repoRoot, stack.stackDef.env);
+    if (!fs.existsSync(envPath)) {
+      throw new Error(`Required template file not found: ${stack.stackDef.env}`);
+    }
+    fs.copyFileSync(envPath, path.join(tempDir, '.env.example'));
+    filesCreated++;
+  }
+
+  fs.writeFileSync(
+    path.join(tempDir, 'package.json'),
+    generateFrontendPackageJson(variables),
+    'utf8'
+  );
+  filesCreated++;
+
+  fs.writeFileSync(
+    path.join(tempDir, 'tsconfig.json'),
+    generateTsConfig(variables),
+    'utf8'
+  );
+  filesCreated++;
+
+  const ciPath = path.join(variables.createContext.repoRoot, 'templates', 'shared', 'workflows', 'ci-pr.yaml');
+  if (fs.existsSync(ciPath)) {
+    fs.copyFileSync(ciPath, path.join(tempDir, '.github', 'workflows', 'ci-pr.yaml'));
+    filesCreated++;
+  }
+
+  return filesCreated;
+}
+
+async function materializeBackendStack(
+  tempDir: string,
+  stack: { stackDef: any; spec: any; templateDir: string },
+  variables: TemplateVariables
+): Promise<number> {
+  let filesCreated = 0;
+
+  const scaffoldDir = path.join(stack.templateDir, 'scaffold');
+  if (fs.existsSync(scaffoldDir)) {
+    filesCreated += await copyScaffoldAssets(scaffoldDir, tempDir, variables);
+  }
+
+  if (stack.stackDef.env && !variables.createContext.frontendStack) {
+    const envPath = path.join(variables.createContext.repoRoot, stack.stackDef.env);
+    if (!fs.existsSync(envPath)) {
+      throw new Error(`Required template file not found: ${stack.stackDef.env}`);
+    }
+    fs.copyFileSync(envPath, path.join(tempDir, '.env.example'));
+    filesCreated++;
+  }
+
+  if (variables.stackKey === 'python') {
+    fs.writeFileSync(
+      path.join(tempDir, 'requirements.txt'),
+      generatePythonRequirements(variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else if (variables.stackKey === 'go') {
+    fs.writeFileSync(
+      path.join(tempDir, 'go.mod'),
+      generateGoMod(variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else if (variables.stackKey === 'rust') {
+    fs.writeFileSync(
+      path.join(tempDir, 'Cargo.toml'),
+      generateCargoToml(variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else if (variables.stackKey === 'dotnet') {
+    fs.writeFileSync(
+      path.join(tempDir, `${variables.projectName}.csproj`),
+      generateCsProj(variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else if (variables.stackKey === 'java') {
+    fs.writeFileSync(
+      path.join(tempDir, 'pom.xml'),
+      generatePomXml(variables),
+      'utf8'
+    );
+    filesCreated++;
+  }
+
+  if (!variables.createContext.frontendStack) {
+    const ciPath = path.join(variables.createContext.repoRoot, 'templates', 'shared', 'workflows', 'ci-pr.yaml');
+    if (fs.existsSync(ciPath)) {
+      fs.copyFileSync(ciPath, path.join(tempDir, '.github', 'workflows', 'ci-pr.yaml'));
+      filesCreated++;
+    }
+  }
+
+  return filesCreated;
+}
+
+async function copyScaffoldAssets(
+  scaffoldDir: string,
+  targetDir: string,
+  variables: TemplateVariables
+): Promise<number> {
+  let filesCreated = 0;
+  const entries = fs.readdirSync(scaffoldDir, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const sourcePath = path.join(scaffoldDir, entry.name);
+    const targetPath = path.join(targetDir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (!fs.existsSync(targetPath)) {
+        fs.mkdirSync(targetPath, { recursive: true });
+      }
+      filesCreated += await copyScaffoldAssets(sourcePath, targetPath, variables);
+    } else if (entry.isFile()) {
+      if (entry.name.endsWith('.template')) {
+        const content = fs.readFileSync(sourcePath, 'utf8');
+        const rendered = renderTemplate(content, variables);
+        const finalPath = targetPath.replace(/\.template$/, '');
+        fs.writeFileSync(finalPath, rendered, 'utf8');
+        filesCreated++;
+      } else {
+        fs.copyFileSync(sourcePath, targetPath);
+        filesCreated++;
       }
     }
   }
+
+  return filesCreated;
 }
 
 async function generateStandardsArtifacts(
-  outputPath: string,
-  variables: TemplateVariables,
-  resolved: ResolvedContext
-): Promise<void> {
-  logger.info('generating_standards_artifacts');
+  tempDir: string,
+  variables: TemplateVariables
+): Promise<number> {
+  let filesCreated = 0;
 
-  await generateAgentsMd(outputPath, variables, resolved);
-  await generateCursorRules(outputPath, variables, resolved);
-  await generateConventionsMd(outputPath, variables, resolved);
+  fs.writeFileSync(
+    path.join(tempDir, 'AGENTS.md'),
+    generateAgentsMdContent(variables),
+    'utf8'
+  );
+  filesCreated++;
+
+  fs.writeFileSync(
+    path.join(tempDir, '.cursor', 'rules'),
+    generateCursorRulesContent(variables),
+    'utf8'
+  );
+  filesCreated++;
+
+  fs.writeFileSync(
+    path.join(tempDir, 'docs', 'conventions.md'),
+    generateConventionsMdContent(variables),
+    'utf8'
+  );
+  filesCreated++;
+
+  return filesCreated;
 }
 
-async function generateAgentsMd(
-  outputPath: string,
-  variables: TemplateVariables,
-  resolved: ResolvedContext
-): Promise<void> {
-  const content = `# Project Agents: ${variables.projectName}
+function generateFrontendPackageJson(variables: TemplateVariables): string {
+  const pkg: Record<string, any> = {
+    name: variables.projectName,
+    version: '0.1.0',
+    private: true,
+    type: 'module',
+    scripts: {},
+    dependencies: {},
+    devDependencies: {
+      'typescript': '^5.0.0',
+    },
+  };
 
-Generated by ai-agent-workflows
-Template: ${variables.stackKey} v${variables.templateVersion}
-Contracts: platform-contracts.yaml v${variables.contractsVersion}
-Generated: ${variables.timestamp}
-
-## Available Agents
-
-### Orchestrator
-- Role: Project coordination and task breakdown
-- Trigger: Start of new feature or complex task
-- Skills: requirements-clarification, architecture-planning
-- Handoff: Delegates to implementers
-
-### Stack Implementer (${variables.framework})
-- Role: Implementation for ${variables.framework} stack
-- Trigger: Handoff from orchestrator with implementation plan
-- Skills: impl-${variables.stackKey}, test-${variables.stackKey}-unit
-- Patterns:
-  - State: ${variables.stateManagement ? `${variables.stateManagement.serverState} + ${variables.stateManagement.clientState}` : 'N/A'}
-  - Testing: ${variables.unitTestFramework || 'N/A'}
-
-### Code Reviewer
-- Role: Review implementations for quality and standards
-- Trigger: Implementation complete, ready for review
-- Skills: code-review, quality-assurance
-
-### Tester
-- Role: Write and run tests
-- Trigger: Implementation complete or test failures
-- Skills: test-backend-unit, test-frontend-unit
-- Commands:
-  - Unit: ${variables.unitTestCommand || 'N/A'}
-  - E2E: ${variables.e2eTestCommand || 'N/A'}
-
-## Stack Conventions
-
-- Framework: ${variables.framework}
-- Language: ${variables.language}
-${variables.stateManagement ? `- State Management: ${variables.stateManagement.serverState} + ${variables.stateManagement.clientState}` : ''}
-- Testing: ${variables.unitTestFramework || 'N/A'}
-
-## Required Capabilities
-
-${variables.requiredCapabilities.map((cap) => `- ${cap}`).join('\n')}
-
-## Workspace Skills
-
-Skills can be installed at \`.github/skills/{family}/SKILL.md\`
-
-Recommended families for this stack:
-${variables.stackKey === 'nextjs' || variables.stackKey === 'sveltekit' || variables.stackKey === 'angular' ? '- impl-frontend\n- test-frontend-unit\n- test-e2e' : ''}
-${variables.stackKey.startsWith('node_') || variables.stackKey === 'python' || variables.stackKey === 'go' ? '- impl-backend\n- test-backend-unit' : ''}
-`;
-
-  const agentsPath = path.join(outputPath, 'AGENTS.md');
-  fs.writeFileSync(agentsPath, content, 'utf8');
-  logger.info('generated_agents_md', { path: agentsPath });
-}
-
-async function generateCursorRules(
-  outputPath: string,
-  variables: TemplateVariables,
-  resolved: ResolvedContext
-): Promise<void> {
-  const content = `# Cursor Rules: ${variables.projectName}
-
-Generated by ai-agent-workflows
-Template: ${variables.stackKey} v${variables.templateVersion}
-Contracts: platform-contracts.yaml v${variables.contractsVersion}
-
-## Stack
-- Framework: ${variables.framework} (${variables.stackKey})
-- Language: ${variables.language}
-- Template Version: ${variables.templateVersion}
-
-${variables.stateManagement ? `## State Management (Frontend)
-- Server State: ${variables.stateManagement.serverState}
-  - Keep server state in query cache
-  - Use ${variables.stateManagement.serverState} hooks for API data
-- Client State: ${variables.stateManagement.clientState}
-  - Keep UI state in feature-local stores
-  - Avoid global state for feature-specific UI
-- Form State: ${variables.stateManagement.formState}
-  - Use ${variables.stateManagement.formState} for all forms
-  - Use validation schemas
-` : ''}
-## Testing
-- Unit Tests: \`${variables.unitTestCommand || 'npm test'}\` via ${variables.unitTestFramework || 'N/A'}
-- E2E Tests: \`${variables.e2eTestCommand || 'npm run test:e2e'}\` via ${variables.e2eTestFramework || 'N/A'}
-- Coverage: Target 80%+ for new code
-
-## Required Capabilities
-The following platform capabilities must remain implemented:
-${variables.requiredCapabilities.map((cap) => `- ${cap}`).join('\n')}
-
-Changes to these capabilities must maintain contract compatibility (see templates/shared/platform-contracts.yaml).
-
-## Code Patterns
-- Imports: Always at top of file, no inline imports
-- Naming: Descriptive variable names, verb-first function names
-- Error Handling: Use correlation IDs for all errors
-- Observability: Emit telemetry for all key operations
-
-## Platform Contracts
-This project implements:
-- Feature Flags API (CAP-FF-*)
-- Reporting API (CAP-REP-*)
-- Admin Dashboard (CAP-ADM-*)
-
-Contract changes require template version bump.
-`;
-
-  const cursorDir = path.join(outputPath, '.cursor');
-  if (!fs.existsSync(cursorDir)) {
-    fs.mkdirSync(cursorDir, { recursive: true });
+  if (variables.stackKey === 'nextjs') {
+    pkg.scripts = {
+      dev: 'next dev',
+      build: 'next build',
+      start: 'next start',
+      lint: 'next lint',
+      'test:unit': variables.unitTestCommand || 'vitest',
+      'test:e2e': variables.e2eTestCommand || 'playwright test',
+    };
+    pkg.dependencies = {
+      'next': '^14.0.0',
+      'react': '^18.3.0',
+      'react-dom': '^18.3.0',
+    };
+    pkg.devDependencies = {
+      ...pkg.devDependencies,
+      '@types/react': '^18.3.0',
+      '@types/react-dom': '^18.3.0',
+    };
+  } else if (variables.stackKey === 'sveltekit') {
+    pkg.scripts = {
+      dev: 'vite dev',
+      build: 'vite build',
+      preview: 'vite preview',
+      'test:unit': variables.unitTestCommand || 'vitest',
+      'test:e2e': variables.e2eTestCommand || 'playwright test',
+    };
+    pkg.dependencies = {
+      'svelte': '^4.0.0',
+      '@sveltejs/kit': '^2.0.0',
+    };
+  } else if (variables.stackKey === 'angular') {
+    pkg.scripts = {
+      dev: 'ng serve',
+      build: 'ng build',
+      'test:unit': variables.unitTestCommand || 'ng test',
+      'test:e2e': variables.e2eTestCommand || 'ng e2e',
+    };
+    pkg.dependencies = {
+      '@angular/core': '^17.0.0',
+      '@angular/common': '^17.0.0',
+      '@angular/platform-browser': '^17.0.0',
+    };
+  } else {
+    pkg.scripts = {
+      dev: 'vite dev',
+      build: 'vite build',
+      preview: 'vite preview',
+      'test:unit': variables.unitTestCommand || 'vitest',
+      'test:e2e': variables.e2eTestCommand || 'playwright test',
+    };
+    pkg.dependencies = {
+      'react': '^18.3.0',
+      'react-dom': '^18.3.0',
+    };
+    pkg.devDependencies = {
+      ...pkg.devDependencies,
+      '@types/react': '^18.3.0',
+      '@types/react-dom': '^18.3.0',
+    };
   }
 
-  const rulesPath = path.join(cursorDir, 'rules');
-  fs.writeFileSync(rulesPath, content, 'utf8');
-  logger.info('generated_cursor_rules', { path: rulesPath });
+  return JSON.stringify(pkg, null, 2);
 }
 
-async function generateConventionsMd(
-  outputPath: string,
-  variables: TemplateVariables,
-  resolved: ResolvedContext
-): Promise<void> {
-  const content = `# Stack Conventions: ${variables.projectName}
+function generateTsConfig(variables: TemplateVariables): string {
+  const config = {
+    compilerOptions: {
+      target: 'ES2022',
+      lib: ['ES2022', 'DOM', 'DOM.Iterable'],
+      jsx: 'preserve',
+      module: 'ESNext',
+      moduleResolution: 'bundler',
+      resolveJsonModule: true,
+      allowJs: true,
+      strict: true,
+      noEmit: true,
+      esModuleInterop: true,
+      skipLibCheck: true,
+      forceConsistentCasingInFileNames: true,
+      incremental: true,
+      paths: {
+        '@/*': ['./src/*'],
+      },
+    },
+    include: ['src/**/*', 'tests/**/*'],
+    exclude: ['node_modules'],
+  };
 
-## Overview
-This document defines the engineering conventions for this ${variables.framework} project.
-Generated: ${variables.timestamp}
+  return JSON.stringify(config, null, 2);
+}
 
-## Technology Stack
-- Framework: ${variables.framework}
-- Language: ${variables.language}
-${variables.stateManagement ? `- State Management: ${variables.stateManagement.serverState} + ${variables.stateManagement.clientState}` : ''}
-- Testing: ${variables.unitTestFramework || 'N/A'}
-
-## Project Structure
-\`\`\`
-src/
-  app/           # Routes and layouts
-  features/      # Feature-based modules
-  lib/           # Shared utilities
-  components/    # Shared UI components
-tests/
-  unit/          # Unit tests
-  e2e/           # End-to-end tests
-\`\`\`
-
-${variables.stateManagement ? `## State Management Patterns
-
-### Server State
-- Tool: ${variables.stateManagement.serverState}
-- Location: Feature-level hooks (e.g., src/features/reports/use-reports.ts)
-- Pattern: Query hooks for reads, mutation hooks for writes
-
-### Client State
-- Tool: ${variables.stateManagement.clientState}
-- Location: Feature-level stores (e.g., src/features/reports/report-store.ts)
-- Pattern: Slice-based stores, single responsibility
-` : ''}
-## Testing Conventions
-- Unit: Test business logic and utilities
-- Integration: Test feature modules with mocked dependencies
-- E2E: Test critical user journeys
-
-Commands:
-- Unit: \`${variables.unitTestCommand || 'npm test'}\`
-- E2E: \`${variables.e2eTestCommand || 'npm run test:e2e'}\`
-
-## Required Capabilities
-This project must maintain implementations for:
-${variables.requiredCapabilities.map((cap) => `- ${cap}`).join('\n')}
-
-See \`templates/shared/platform-contracts.yaml\` for API contracts.
-
-## Code Style
-- Naming: Use descriptive names (getUserById, not getData)
-- Imports: Top of file, no inline imports
-- Exports: Explicit exports, no export * unless necessary
-- Comments: Explain why, not what
+function generatePythonRequirements(variables: TemplateVariables): string {
+  return `fastapi==0.104.0
+uvicorn[standard]==0.24.0
+pydantic==2.5.0
+sqlalchemy==2.0.23
+alembic==1.12.1
+structlog==23.2.0
+pytest==7.4.3
+pytest-asyncio==0.21.1
+httpx==0.25.1
 `;
+}
 
-  const docsDir = path.join(outputPath, 'docs');
-  if (!fs.existsSync(docsDir)) {
-    fs.mkdirSync(docsDir, { recursive: true });
-  }
+function generateGoMod(variables: TemplateVariables): string {
+  return `module ${variables.projectName}
 
-  const conventionsPath = path.join(docsDir, 'conventions.md');
-  fs.writeFileSync(conventionsPath, content, 'utf8');
-  logger.info('generated_conventions_md', { path: conventionsPath });
+go 1.21
+
+require (
+	github.com/gofiber/fiber/v2 v2.51.0
+	github.com/stretchr/testify v1.8.4
+)
+`;
+}
+
+function generateCargoToml(variables: TemplateVariables): string {
+  return `[package]
+name = "${variables.projectName}"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = "0.7"
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[dev-dependencies]
+reqwest = "0.11"
+`;
+}
+
+function generateCsProj(variables: TemplateVariables): string {
+  return `<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="8.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+  </ItemGroup>
+</Project>
+`;
+}
+
+function generatePomXml(variables: TemplateVariables): string {
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.example</groupId>
+    <artifactId>${variables.projectName}</artifactId>
+    <version>0.1.0</version>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+    </parent>
+
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
+`;
 }
