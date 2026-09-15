@@ -69,8 +69,43 @@ npm run templates:test-parity
 npm run templates:validate-parity
 ```
 
+## Create-Project Scaffolding (Preview)
+
+The CLI now includes a `create` mode for scaffolding new projects from templates:
+
+```bash
+# Interactive wizard
+ai-agent-pack-install create
+
+# Scaffold a frontend project
+ai-agent-pack-install create frontend my-app
+
+# Scaffold a backend API
+ai-agent-pack-install create backend api-service --stack python
+
+# Scaffold fullstack application
+ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
+
+# Scaffold CLI tool or library
+ai-agent-pack-install create cli my-tool
+ai-agent-pack-install create lib my-package
+```
+
+**Archetypes:**
+- `frontend` — Browser-based UI application (choose from nextjs, sveltekit, angular)
+- `backend` — API service or backend (choose from node_nestjs, python, go, dotnet, java, rust)
+- `fullstack` — Combined frontend + backend
+- `lib` — Reusable package or module
+- `cli` — Command-line tool or utility
+
+**Stack Catalog Contract:**  
+Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
+
+**Current Status:**  
+Command surface implemented (issue #32). Template materialization, standards artifact generation, and preset system coming in issues #33-#36.
+
 ## Status
 
 **Current:** working - 75% complete
 
-Core installer, agents, templates, and tests are in place. Primary remaining work is first npm release and optional platform installers.
+Core installer, agents, templates, and tests are in place. Create-project scaffolding command surface added (issue #32). Primary remaining work is materialization engine (#33), first npm release, and optional platform installers.
