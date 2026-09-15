@@ -10,6 +10,7 @@ import { loadToolsRegistry, listToolIds } from './lib/registry.js';
 import { runInstall, type InstallManifestV3 } from './lib/pipeline.js';
 import { listAgents } from './lib/agents.js';
 import { listSkillFamilies, loadAgentSkillMap, getRequiredSkills } from './lib/skills.js';
+import { runCreate, type CreateArgs } from './create-project.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -18,6 +19,7 @@ function defaultRepoRoot(): string {
 }
 
 interface ParsedArgs {
+  mode: 'install' | 'create';
   targets: string[] | null;
   workspace: string | undefined;
   workspaceTemplates: boolean;
@@ -34,10 +36,19 @@ interface ParsedArgs {
   localRoot: string | null;
   skillFamilies: string[] | null;
   allSkills: boolean;
+  createArchetype: string | null;
+  createProjectName: string | null;
+  createOutputPath: string | null;
+  createStack: string | null;
+  createFrontendStack: string | null;
+  createBackendStack: string | null;
+  createPreset: string | null;
+  createSkipSkills: boolean;
 }
 
 function parseArgs(argv: string[]): ParsedArgs {
   const out: ParsedArgs = {
+    mode: 'install',
     targets: null,
     workspace: undefined,
     workspaceTemplates: false,
@@ -54,12 +65,37 @@ function parseArgs(argv: string[]): ParsedArgs {
     localRoot: null,
     skillFamilies: null,
     allSkills: false,
+    createArchetype: null,
+    createProjectName: null,
+    createOutputPath: null,
+    createStack: null,
+    createFrontendStack: null,
+    createBackendStack: null,
+    createPreset: null,
+    createSkipSkills: false,
   };
 
+  let positionalIdx = 0;
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (a === '-h' || a === '--help') {
       out.help = true;
+    } else if (a === 'create') {
+      out.mode = 'create';
+    } else if (a === '--archetype' && argv[i + 1]) {
+      out.createArchetype = argv[++i]!.trim();
+    } else if (a === '--output' && argv[i + 1]) {
+      out.createOutputPath = path.resolve(argv[++i]!);
+    } else if (a === '--stack' && argv[i + 1]) {
+      out.createStack = argv[++i]!.trim();
+    } else if (a === '--frontend' && argv[i + 1]) {
+      out.createFrontendStack = argv[++i]!.trim();
+    } else if (a === '--backend' && argv[i + 1]) {
+      out.createBackendStack = argv[++i]!.trim();
+    } else if (a === '--preset' && argv[i + 1]) {
+      out.createPreset = argv[++i]!.trim();
+    } else if (a === '--skip-skills') {
+      out.createSkipSkills = true;
     } else if (a === '--targets' && argv[i + 1]) {
       out.targets = argv[++i]!.split(',').map((s) => s.trim()).filter(Boolean);
     } else if (a === '--target' && argv[i + 1]) {
@@ -100,7 +136,15 @@ function parseArgs(argv: string[]): ParsedArgs {
     } else if (a === '--all-skills') {
       out.allSkills = true;
     } else if (!a.startsWith('-')) {
-      continue;
+      if (out.mode === 'create' && positionalIdx === 0 && !out.createArchetype) {
+        out.createArchetype = a;
+        positionalIdx++;
+      } else if (out.mode === 'create' && positionalIdx === 1 && !out.createProjectName) {
+        out.createProjectName = a;
+        positionalIdx++;
+      } else {
+        continue;
+      }
     } else {
       console.error(`Unknown option: ${a}`);
       printHelp();
@@ -112,9 +156,11 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 function printHelp(): void {
-  console.log(`Usage: ai-agent-pack-install [options]
-       npm run pack:install -- [options]   (from a clone of this repo)
+  console.log(`Usage: 
+  ai-agent-pack-install [options]              Install agents into IDEs
+  ai-agent-pack-install create [archetype] [name] [options]   Scaffold new project
 
+INSTALL MODE:
 Install agents + templates into selected IDE prompt folders; optionally copy
 skills and templates into a project workspace.
 
@@ -124,7 +170,7 @@ With npx: \`npx @nholder88/ai-agent-workflows-tools\` (same command; package is 
 Run without --yes for an interactive wizard (select editors, scope, agents,
 workspace options, dry-run, confirm).
 
-Options:
+Install Options:
   --targets <id,id>     Comma-separated tool ids (e.g. claude,vscode,cursor)
   --target <id>         Add one target (repeatable)
   --scope local|global  Install scope: local (project folder) or global (OS user dirs) [default: global]
@@ -141,6 +187,33 @@ Options:
   --registry <path>     Override cli/tools.registry.json
   --dry-run             Print actions without writing files
   --yes, -y             Non-interactive (use with --targets; optional --workspace)
+
+CREATE MODE:
+Scaffold a new project from templates with stack-specific agents and standards.
+
+Run without arguments for an interactive wizard, or provide archetype and name
+for non-interactive usage.
+
+Examples:
+  ai-agent-pack-install create                  Interactive wizard
+  ai-agent-pack-install create react my-app     React project with defaults
+  ai-agent-pack-install create api billing-service   Backend API project
+  ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
+
+Create Options:
+  create                Start create mode (required for scaffolding)
+  <archetype>           Project archetype: react, api, fullstack, library
+  <name>                Project name (will be directory name)
+  --archetype <type>    Explicit archetype (alternative to positional)
+  --output <path>       Output directory [default: ./<name>]
+  --stack <key>         Stack key for single-stack archetypes
+  --frontend <key>      Frontend stack for fullstack archetype (e.g. nextjs)
+  --backend <key>       Backend stack for fullstack archetype (e.g. python)
+  --preset <name>       Apply opinionated preset (e.g. nigel-react)
+  --skip-skills         Skip copying workspace skills
+  --yes, -y             Non-interactive mode with defaults
+
+Common Options:
   -h, --help            Show help
 `);
 }
@@ -175,6 +248,23 @@ async function main(): Promise<void> {
   if (args.help) {
     printHelp();
     process.exit(0);
+  }
+
+  if (args.mode === 'create') {
+    const createArgs: CreateArgs = {
+      archetype: args.createArchetype,
+      projectName: args.createProjectName,
+      outputPath: args.createOutputPath,
+      stack: args.createStack,
+      frontendStack: args.createFrontendStack,
+      backendStack: args.createBackendStack,
+      preset: args.createPreset,
+      skipSkills: args.createSkipSkills,
+      yes: args.yes,
+      repoRoot: args.source,
+    };
+    await runCreate(createArgs);
+    return;
   }
 
   if (args.yes && args.workspaceTemplates && args.workspace === undefined) {
