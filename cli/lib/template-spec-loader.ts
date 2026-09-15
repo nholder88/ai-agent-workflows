@@ -63,10 +63,21 @@ export function loadTemplateSpec(specPath: string): TemplateSpec {
   }
 
   const raw = fs.readFileSync(specPath, 'utf8');
-  const parsed = YAML.parse(raw) as TemplateSpec;
+  const parsed = YAML.parse(raw) as any;
 
-  if (!parsed.version || !parsed.template || !parsed.framework) {
-    throw new Error(`Invalid template spec at ${specPath}: missing required fields (version, template, framework)`);
+  if (!parsed.version || !parsed.template) {
+    throw new Error(`Invalid template spec at ${specPath}: missing required fields (version, template)`);
+  }
+
+  if (parsed.stack && !parsed.framework) {
+    parsed.framework = {
+      name: parsed.stack.preferred_framework || parsed.stack.framework || 'Unknown',
+      language: parsed.stack.language || 'Unknown',
+    };
+  }
+
+  if (!parsed.framework) {
+    throw new Error(`Invalid template spec at ${specPath}: missing framework or stack configuration`);
   }
 
   if (!parsed.required_capabilities || !Array.isArray(parsed.required_capabilities)) {
@@ -77,7 +88,7 @@ export function loadTemplateSpec(specPath: string): TemplateSpec {
     throw new Error(`Invalid template spec at ${specPath}: missing ci_command_contract.stack_key`);
   }
 
-  return parsed;
+  return parsed as TemplateSpec;
 }
 
 export function loadPlatformContracts(contractsPath: string): Record<string, unknown> {

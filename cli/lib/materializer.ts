@@ -209,7 +209,7 @@ async function materializeFrontendStack(
 
   fs.writeFileSync(
     path.join(tempDir, 'package.json'),
-    generateFrontendPackageJson(variables),
+    generateFrontendPackageJson(stack.stackDef.key, variables),
     'utf8'
   );
   filesCreated++;
@@ -251,38 +251,54 @@ async function materializeBackendStack(
     filesCreated++;
   }
 
-  if (variables.stackKey === 'python') {
+  const stackKey = stack.stackDef.key;
+
+  if (stackKey === 'python') {
     fs.writeFileSync(
       path.join(tempDir, 'requirements.txt'),
       generatePythonRequirements(variables),
       'utf8'
     );
     filesCreated++;
-  } else if (variables.stackKey === 'go') {
+  } else if (stackKey === 'go') {
     fs.writeFileSync(
       path.join(tempDir, 'go.mod'),
       generateGoMod(variables),
       'utf8'
     );
     filesCreated++;
-  } else if (variables.stackKey === 'rust') {
+  } else if (stackKey === 'rust') {
     fs.writeFileSync(
       path.join(tempDir, 'Cargo.toml'),
       generateCargoToml(variables),
       'utf8'
     );
     filesCreated++;
-  } else if (variables.stackKey === 'dotnet') {
+  } else if (stackKey === 'dotnet') {
     fs.writeFileSync(
       path.join(tempDir, `${variables.projectName}.csproj`),
       generateCsProj(variables),
       'utf8'
     );
     filesCreated++;
-  } else if (variables.stackKey === 'java') {
+  } else if (stackKey === 'java') {
     fs.writeFileSync(
       path.join(tempDir, 'pom.xml'),
       generatePomXml(variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else if (stackKey === 'node_nestjs' || stackKey.startsWith('node_')) {
+    fs.writeFileSync(
+      path.join(tempDir, 'package.json'),
+      generateNodeBackendPackageJson(variables),
+      'utf8'
+    );
+    filesCreated++;
+
+    fs.writeFileSync(
+      path.join(tempDir, 'tsconfig.json'),
+      generateTsConfig(variables),
       'utf8'
     );
     filesCreated++;
@@ -363,7 +379,7 @@ async function generateStandardsArtifacts(
   return filesCreated;
 }
 
-function generateFrontendPackageJson(variables: TemplateVariables): string {
+function generateFrontendPackageJson(stackKey: string, variables: TemplateVariables): string {
   const pkg: Record<string, any> = {
     name: variables.projectName,
     version: '0.1.0',
@@ -376,7 +392,7 @@ function generateFrontendPackageJson(variables: TemplateVariables): string {
     },
   };
 
-  if (variables.stackKey === 'nextjs') {
+  if (stackKey === 'nextjs') {
     pkg.scripts = {
       dev: 'next dev',
       build: 'next build',
@@ -395,7 +411,7 @@ function generateFrontendPackageJson(variables: TemplateVariables): string {
       '@types/react': '^18.3.0',
       '@types/react-dom': '^18.3.0',
     };
-  } else if (variables.stackKey === 'sveltekit') {
+  } else if (stackKey === 'sveltekit') {
     pkg.scripts = {
       dev: 'vite dev',
       build: 'vite build',
@@ -407,7 +423,7 @@ function generateFrontendPackageJson(variables: TemplateVariables): string {
       'svelte': '^4.0.0',
       '@sveltejs/kit': '^2.0.0',
     };
-  } else if (variables.stackKey === 'angular') {
+  } else if (stackKey === 'angular') {
     pkg.scripts = {
       dev: 'ng serve',
       build: 'ng build',
@@ -437,6 +453,44 @@ function generateFrontendPackageJson(variables: TemplateVariables): string {
       '@types/react-dom': '^18.3.0',
     };
   }
+
+  return JSON.stringify(pkg, null, 2);
+}
+
+function generateNodeBackendPackageJson(variables: TemplateVariables): string {
+  const pkg = {
+    name: variables.projectName,
+    version: '0.1.0',
+    private: true,
+    type: 'module',
+    scripts: {
+      dev: 'nest start --watch',
+      build: 'nest build',
+      start: 'node dist/main',
+      'start:prod': 'node dist/main',
+      'test:unit': variables.unitTestCommand || 'jest',
+      'test:e2e': variables.e2eTestCommand || 'jest --config ./test/jest-e2e.json',
+    },
+    dependencies: {
+      '@nestjs/common': '^10.0.0',
+      '@nestjs/core': '^10.0.0',
+      '@nestjs/platform-express': '^10.0.0',
+      'reflect-metadata': '^0.1.13',
+      'rxjs': '^7.8.1',
+    },
+    devDependencies: {
+      '@nestjs/cli': '^10.0.0',
+      '@nestjs/schematics': '^10.0.0',
+      '@nestjs/testing': '^10.0.0',
+      '@types/express': '^4.17.17',
+      '@types/node': '^20.0.0',
+      '@types/jest': '^29.5.2',
+      'typescript': '^5.0.0',
+      'jest': '^29.5.0',
+      'ts-jest': '^29.1.0',
+      'ts-node': '^10.9.1',
+    },
+  };
 
   return JSON.stringify(pkg, null, 2);
 }

@@ -207,4 +207,51 @@ describe('materializeProject', () => {
     assert.ok(goMod.includes('test-go-backend'));
     assert.ok(goMod.includes('fiber'));
   });
+
+  it('should generate package.json for NestJS backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-nestjs-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-nestjs-backend'),
+      backendStack: 'node_nestjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tsconfig.json')));
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['@nestjs/core']);
+    assert.ok(packageJson.dependencies['@nestjs/common']);
+    assert.ok(!packageJson.dependencies['react']);
+    assert.ok(!packageJson.dependencies['react-dom']);
+  });
+
+  it('should generate both frontend package.json AND backend requirements.txt for fullstack', async () => {
+    const ctx: CreateContext = {
+      archetype: 'fullstack',
+      projectName: 'test-fullstack-complete',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-fullstack-complete'),
+      frontendStack: 'nextjs',
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')));
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['react']);
+    assert.ok(packageJson.dependencies['next']);
+
+    const requirements = fs.readFileSync(path.join(ctx.outputPath, 'requirements.txt'), 'utf8');
+    assert.ok(requirements.includes('fastapi'));
+    assert.ok(requirements.includes('uvicorn'));
+  });
 });
