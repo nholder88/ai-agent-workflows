@@ -2,273 +2,274 @@
  * Tests for template materialization engine.
  */
 import { describe, it, beforeEach, afterEach } from 'node:test';
-import * as assert from 'node:assert/strict';
-import * as fs from 'node:fs/promises';
+import assert from 'node:assert';
+import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
+import { fileURLToPath } from 'node:url';
 import { materializeProject } from './materializer.js';
 import type { CreateContext } from '../create-project.js';
 
-describe('materializer', () => {
-  let tempDir: string;
-  let testOutputDir: string;
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, '..', '..');
+const TEST_OUTPUT_DIR = path.join(repoRoot, '.test-output');
 
-  beforeEach(async () => {
-    tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'materializer-test-'));
-    testOutputDir = path.join(tempDir, 'test-project');
-  });
-
-  afterEach(async () => {
-    try {
-      await fs.rm(tempDir, { recursive: true, force: true });
-    } catch {
-      // ignore cleanup errors
-    }
-  });
-
-  describe('materializeProject', () => {
-    it('creates project directory structure for nextjs frontend', async () => {
-      const ctx: CreateContext = {
-        archetype: 'frontend',
-        projectName: 'my-next-app',
-        outputPath: testOutputDir,
-        stack: 'nextjs',
-        frontendStack: 'nextjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const files = [
-        'package.json',
-        'tsconfig.json',
-        'next.config.js',
-        'src/app/layout.tsx',
-        'src/app/page.tsx',
-        'src/features/reports/report-service.ts',
-        'AGENTS.md',
-        '.cursor/rules',
-        '.env.example',
-      ];
-
-      for (const file of files) {
-        const filePath = path.join(testOutputDir, file);
-        const exists = await fileExists(filePath);
-        assert.ok(exists, `Expected file ${file} to exist`);
-      }
-    });
-
-    it('renders projectName template variable in files', async () => {
-      const ctx: CreateContext = {
-        archetype: 'frontend',
-        projectName: 'awesome-app',
-        outputPath: testOutputDir,
-        stack: 'nextjs',
-        frontendStack: 'nextjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const packageJsonPath = path.join(testOutputDir, 'package.json');
-      const content = await fs.readFile(packageJsonPath, 'utf-8');
-      const packageJson = JSON.parse(content);
-
-      assert.equal(packageJson.name, 'awesome-app', 'package.json name should be rendered');
-    });
-
-    it('creates project directory structure for node_nestjs backend', async () => {
-      const ctx: CreateContext = {
-        archetype: 'backend',
-        projectName: 'my-api',
-        outputPath: testOutputDir,
-        stack: 'node_nestjs',
-        backendStack: 'node_nestjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const files = [
-        'package.json',
-        'tsconfig.json',
-        'nest-cli.json',
-        'src/main.ts',
-        'src/app.module.ts',
-        'src/health/health.controller.ts',
-        'src/reports/reports.service.ts',
-        'src/admin/admin.service.ts',
-        'AGENTS.md',
-        '.cursor/rules',
-        '.env.example',
-      ];
-
-      for (const file of files) {
-        const filePath = path.join(testOutputDir, file);
-        const exists = await fileExists(filePath);
-        assert.ok(exists, `Expected file ${file} to exist`);
-      }
-    });
-
-    it('creates project directory structure for python backend', async () => {
-      const ctx: CreateContext = {
-        archetype: 'backend',
-        projectName: 'my-api',
-        outputPath: testOutputDir,
-        stack: 'python',
-        backendStack: 'python',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const files = [
-        'main.py',
-        'requirements.txt',
-        'requirements-dev.txt',
-        'src/app.py',
-        'src/config.py',
-        'src/api/health.py',
-        'src/api/reports.py',
-        'src/api/admin.py',
-        'tests/unit/test_reporting_service.py',
-        'tests/e2e/test_api_smoke.py',
-        'AGENTS.md',
-        '.cursor/rules',
-        '.env.example',
-      ];
-
-      for (const file of files) {
-        const filePath = path.join(testOutputDir, file);
-        const exists = await fileExists(filePath);
-        assert.ok(exists, `Expected file ${file} to exist`);
-      }
-    });
-
-    it('creates project directory structure for fullstack project', async () => {
-      const ctx: CreateContext = {
-        archetype: 'fullstack',
-        projectName: 'my-fullstack',
-        outputPath: testOutputDir,
-        frontendStack: 'nextjs',
-        backendStack: 'node_nestjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const frontendFiles = ['src/app/layout.tsx', 'src/app/page.tsx'];
-      const backendFiles = ['src/main.ts', 'src/app.module.ts'];
-
-      for (const file of frontendFiles) {
-        const filePath = path.join(testOutputDir, file);
-        const exists = await fileExists(filePath);
-        assert.ok(exists, `Expected frontend file ${file} to exist`);
-      }
-
-      for (const file of backendFiles) {
-        const filePath = path.join(testOutputDir, file);
-        const exists = await fileExists(filePath);
-        assert.ok(exists, `Expected backend file ${file} to exist`);
-      }
-    });
-
-    it('generates AGENTS.md with stack information', async () => {
-      const ctx: CreateContext = {
-        archetype: 'frontend',
-        projectName: 'test-app',
-        outputPath: testOutputDir,
-        stack: 'nextjs',
-        frontendStack: 'nextjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const agentsMdPath = path.join(testOutputDir, 'AGENTS.md');
-      const content = await fs.readFile(agentsMdPath, 'utf-8');
-
-      assert.ok(content.includes('test-app'), 'AGENTS.md should include project name');
-      assert.ok(content.includes('nextjs'), 'AGENTS.md should include stack');
-      assert.ok(content.includes('Zustand + TanStack Query'), 'AGENTS.md should include state management');
-    });
-
-    it('generates .cursor/rules with project conventions', async () => {
-      const ctx: CreateContext = {
-        archetype: 'backend',
-        projectName: 'test-api',
-        outputPath: testOutputDir,
-        stack: 'python',
-        backendStack: 'python',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const rulesPath = path.join(testOutputDir, '.cursor', 'rules');
-      const content = await fs.readFile(rulesPath, 'utf-8');
-
-      assert.ok(content.includes('test-api'), '.cursor/rules should include project name');
-      assert.ok(content.includes('python'), '.cursor/rules should include stack');
-      assert.ok(content.includes('pytest'), '.cursor/rules should include testing framework');
-    });
-
-    it('throws error if output directory exists and is not empty', async () => {
-      await fs.mkdir(testOutputDir, { recursive: true });
-      await fs.writeFile(path.join(testOutputDir, 'existing.txt'), 'content');
-
-      const ctx: CreateContext = {
-        archetype: 'frontend',
-        projectName: 'test-app',
-        outputPath: testOutputDir,
-        stack: 'nextjs',
-        frontendStack: 'nextjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await assert.rejects(
-        async () => await materializeProject(ctx),
-        /already exists and is not empty/,
-        'Should throw error for non-empty directory'
-      );
-    });
-
-    it('includes unit test files in scaffolded projects', async () => {
-      const ctx: CreateContext = {
-        archetype: 'frontend',
-        projectName: 'test-app',
-        outputPath: testOutputDir,
-        stack: 'nextjs',
-        frontendStack: 'nextjs',
-        skipSkills: true,
-        repoRoot: process.cwd(),
-      };
-
-      await materializeProject(ctx);
-
-      const testFile = path.join(testOutputDir, 'src/features/reports/report-service.test.ts');
-      const exists = await fileExists(testFile);
-      assert.ok(exists, 'Expected test file to exist');
-
-      const content = await fs.readFile(testFile, 'utf-8');
-      assert.ok(content.includes('describe'), 'Test file should contain test code');
-    });
-  });
+beforeEach(() => {
+  if (fs.existsSync(TEST_OUTPUT_DIR)) {
+    fs.rmSync(TEST_OUTPUT_DIR, { recursive: true, force: true });
+  }
+  fs.mkdirSync(TEST_OUTPUT_DIR, { recursive: true });
 });
 
-async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch {
-    return false;
+afterEach(() => {
+  if (fs.existsSync(TEST_OUTPUT_DIR)) {
+    fs.rmSync(TEST_OUTPUT_DIR, { recursive: true, force: true });
   }
-}
+});
+
+describe('materializeProject', () => {
+  it('should materialize a frontend project successfully', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-frontend-app',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-frontend-app'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+    assert.ok(result.directoriesCreated > 0);
+    assert.ok(result.filesCreated > 0);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'AGENTS.md')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'docs', 'conventions.md')));
+
+    // Verify scaffold files from templates/frontend-nextjs/scaffold/ are present
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'layout.tsx')), 'layout.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'page.tsx')), 'page.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'providers.tsx')), 'providers.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.ts')), 'report-service.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.test.ts')), 'report-service.test.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'vitest.config.ts')), 'vitest.config.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'playwright.config.ts')), 'playwright.config.ts from scaffold should exist');
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.strictEqual(packageJson.name, 'test-frontend-app');
+  });
+
+  it('should materialize a backend project successfully', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-backend-api',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-backend-api'),
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+    assert.ok(result.directoriesCreated > 0);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'AGENTS.md')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'docs', 'conventions.md')));
+
+    // Verify scaffold files from templates/backend-python/scaffold/ are present
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'main.py')), 'main.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app.py')), 'src/app.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'config.py')), 'src/config.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'api', 'health.py')), 'src/api/health.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'api', 'reports.py')), 'src/api/reports.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tests', 'unit', 'test_reporting_service.py')), 'test_reporting_service.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')), 'requirements.txt from scaffold should exist');
+  });
+
+  it('should materialize a fullstack project successfully', async () => {
+    const ctx: CreateContext = {
+      archetype: 'fullstack',
+      projectName: 'test-fullstack-app',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-fullstack-app'),
+      frontendStack: 'nextjs',
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+    assert.ok(result.directoriesCreated > 0);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'AGENTS.md')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
+  });
+
+  it('should fail when output directory is not empty', async () => {
+    const outputPath = path.join(TEST_OUTPUT_DIR, 'non-empty');
+    fs.mkdirSync(outputPath, { recursive: true });
+    fs.writeFileSync(path.join(outputPath, 'existing-file.txt'), 'content');
+
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-app',
+      outputPath,
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await assert.rejects(
+      async () => await materializeProject(ctx),
+      (err: Error) => {
+        assert.ok(err.message.includes('Output directory is not empty'));
+        return true;
+      }
+    );
+  });
+
+  it('should fail with invalid stack', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-invalid-stack',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-invalid-stack'),
+      frontendStack: 'invalid-stack',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await assert.rejects(
+      async () => await materializeProject(ctx),
+      (err: Error) => {
+        assert.ok(err.message.includes('not found in catalog'));
+        return true;
+      }
+    );
+  });
+
+  it('should generate correct required capabilities in AGENTS.md', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-capabilities',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-capabilities'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
+    assert.ok(agentsMd.includes('CAP-FF-001'));
+    assert.ok(agentsMd.includes('CAP-REP-001'));
+  });
+
+  it('should generate correct state management in .cursor/rules', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-state-mgmt',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-state-mgmt'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const cursorRules = fs.readFileSync(path.join(ctx.outputPath, '.cursor', 'rules'), 'utf8');
+    assert.ok(cursorRules.includes('TanStack Query'));
+    assert.ok(cursorRules.includes('Zustand'));
+  });
+
+  it('should generate Python requirements.txt for Python backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-python-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-python-backend'),
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')));
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+
+    const requirements = fs.readFileSync(path.join(ctx.outputPath, 'requirements.txt'), 'utf8');
+    assert.ok(requirements.includes('fastapi'));
+    assert.ok(!requirements.includes('react'));
+  });
+
+  it('should generate go.mod for Go backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-go-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-go-backend'),
+      backendStack: 'go',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'go.mod')));
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+
+    const goMod = fs.readFileSync(path.join(ctx.outputPath, 'go.mod'), 'utf8');
+    assert.ok(goMod.includes('test-go-backend'));
+    assert.ok(goMod.includes('fiber'));
+  });
+
+  it('should generate package.json for NestJS backend (not React)', async () => {
+    const ctx: CreateContext = {
+      archetype: 'backend',
+      projectName: 'test-nestjs-backend',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-nestjs-backend'),
+      backendStack: 'node_nestjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tsconfig.json')));
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['@nestjs/core']);
+    assert.ok(packageJson.dependencies['@nestjs/common']);
+    assert.ok(!packageJson.dependencies['react']);
+    assert.ok(!packageJson.dependencies['react-dom']);
+  });
+
+  it('should generate both frontend package.json AND backend requirements.txt for fullstack', async () => {
+    const ctx: CreateContext = {
+      archetype: 'fullstack',
+      projectName: 'test-fullstack-complete',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-fullstack-complete'),
+      frontendStack: 'nextjs',
+      backendStack: 'python',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')));
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['react']);
+    assert.ok(packageJson.dependencies['next']);
+
+    const requirements = fs.readFileSync(path.join(ctx.outputPath, 'requirements.txt'), 'utf8');
+    assert.ok(requirements.includes('fastapi'));
+    assert.ok(requirements.includes('uvicorn'));
+  });
+});
