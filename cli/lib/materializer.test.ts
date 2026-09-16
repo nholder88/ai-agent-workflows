@@ -48,6 +48,15 @@ describe('materializeProject', () => {
     assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
     assert.ok(fs.existsSync(path.join(ctx.outputPath, 'docs', 'conventions.md')));
 
+    // Verify scaffold files from templates/frontend-nextjs/scaffold/ are present
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'layout.tsx')), 'layout.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'page.tsx')), 'page.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app', 'providers.tsx')), 'providers.tsx from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.ts')), 'report-service.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.test.ts')), 'report-service.test.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'vitest.config.ts')), 'vitest.config.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'playwright.config.ts')), 'playwright.config.ts from scaffold should exist');
+
     const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
     assert.strictEqual(packageJson.name, 'test-frontend-app');
   });
@@ -70,6 +79,15 @@ describe('materializeProject', () => {
     assert.ok(fs.existsSync(path.join(ctx.outputPath, 'AGENTS.md')));
     assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
     assert.ok(fs.existsSync(path.join(ctx.outputPath, 'docs', 'conventions.md')));
+
+    // Verify scaffold files from templates/backend-python/scaffold/ are present
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'main.py')), 'main.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app.py')), 'src/app.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'config.py')), 'src/config.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'api', 'health.py')), 'src/api/health.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'api', 'reports.py')), 'src/api/reports.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tests', 'unit', 'test_reporting_service.py')), 'test_reporting_service.py from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'requirements.txt')), 'requirements.txt from scaffold should exist');
   });
 
   it('should materialize a fullstack project successfully', async () => {

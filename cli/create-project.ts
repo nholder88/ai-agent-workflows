@@ -345,8 +345,17 @@ export async function runCreate(args: CreateArgs): Promise<void> {
     console.log('');
     console.log('Next steps:');
     console.log(`  cd ${ctx.projectName}`);
-    console.log('  npm install');
-    console.log('  npm run dev');
+    if (ctx.frontendStack === 'nextjs' || ctx.backendStack === 'node_nestjs') {
+      console.log('  npm install');
+      console.log('  npm run dev');
+    } else if (ctx.backendStack === 'python') {
+      console.log('  python -m venv venv');
+      console.log('  source venv/bin/activate  # On Windows: venv\\Scripts\\activate');
+      console.log('  pip install -r requirements.txt');
+      console.log('  python main.py');
+    } else {
+      console.log('  See README.md for setup instructions');
+    }
     console.log('');
 
     logger.info('create_complete', {

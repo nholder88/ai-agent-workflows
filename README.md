@@ -102,10 +102,15 @@ ai-agent-pack-install create lib my-package
 Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
 
 **Current Status:**  
-Command surface (issue #32) and template materialization engine (issue #33) implemented. Preset system and documentation polish coming in issues #35-#36.
+✅ Command surface (issue #32)  
+✅ Template materialization engine (issue #33)  
+✅ Real scaffold starters for nextjs, node_nestjs, and python (issue #48)  
+✅ Template variable rendering and generated AGENTS.md/.cursor/rules per project
+
+Projects now include real starter code with proper structure, not just empty directories. Preset system coming in issue #35.
 
 ## Status
 
 **Current:** working - 85% complete
 
-Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine functional (issues #32-#33). Primary remaining work is preset system (#35), documentation polish (#36), first npm release, and optional platform installers.
+Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine and real scaffold starters functional (issues #32-#33, #48). Primary remaining work is preset system (#35), documentation polish (#36), first npm release, and optional platform installers.
