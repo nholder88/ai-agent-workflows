@@ -92,11 +92,16 @@ ai-agent-pack-install create lib my-package
 ```
 
 **Archetypes:**
-- `frontend` — Browser-based UI application (choose from nextjs, sveltekit, angular)
+- `frontend` — Browser-based UI application (choose from nextjs, sveltekit; angular deferred)
 - `backend` — API service or backend (choose from node_nestjs, python, go, dotnet, java, rust)
 - `fullstack` — Combined frontend + backend
 - `lib` — Reusable package or module
 - `cli` — Command-line tool or utility
+
+**Frontend Stacks:**
+- `nextjs` — Next.js 15 with Zustand + TanStack Query (✅ Full scaffold)
+- `sveltekit` — SvelteKit 2 with Skeleton UI + TanStack Query (✅ Full scaffold)
+- `angular` — Angular 17+ with NgRx (⏳ Deferred)
 
 **Stack Catalog Contract:**  
 Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
