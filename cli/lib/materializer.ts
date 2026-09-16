@@ -207,19 +207,32 @@ async function materializeFrontendStack(
     filesCreated++;
   }
 
-  fs.writeFileSync(
-    path.join(tempDir, 'package.json'),
-    generateFrontendPackageJson(stack.stackDef.key, variables),
-    'utf8'
-  );
-  filesCreated++;
+  // Only generate package.json if scaffold didn't provide one
+  const packageJsonPath = path.join(tempDir, 'package.json');
+  if (!fs.existsSync(packageJsonPath)) {
+    fs.writeFileSync(
+      packageJsonPath,
+      generateFrontendPackageJson(stack.stackDef.key, variables),
+      'utf8'
+    );
+    filesCreated++;
+  } else {
+    // Scaffold provided package.json - render template variables
+    const content = fs.readFileSync(packageJsonPath, 'utf8');
+    const rendered = renderTemplate(content, variables);
+    fs.writeFileSync(packageJsonPath, rendered, 'utf8');
+  }
 
-  fs.writeFileSync(
-    path.join(tempDir, 'tsconfig.json'),
-    generateTsConfig(variables),
-    'utf8'
-  );
-  filesCreated++;
+  // Only generate tsconfig.json if scaffold didn't provide one
+  const tsconfigPath = path.join(tempDir, 'tsconfig.json');
+  if (!fs.existsSync(tsconfigPath)) {
+    fs.writeFileSync(
+      tsconfigPath,
+      generateTsConfig(variables),
+      'utf8'
+    );
+    filesCreated++;
+  }
 
   const ciPath = path.join(variables.createContext.repoRoot, 'templates', 'shared', 'workflows', 'ci-pr.yaml');
   if (fs.existsSync(ciPath)) {

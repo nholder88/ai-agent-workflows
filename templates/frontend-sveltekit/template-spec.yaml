@@ -50,6 +50,7 @@ testing_starter:
   e2e:
     slot: e2e_test
     command: npm run test:e2e
+    framework: Playwright
     mode: browser
     semantics: Browser journey for report and admin feature-flag flows.
     sample_target: tests/e2e/reporting-admin.spec.ts
