@@ -61,6 +61,41 @@ describe('materializeProject', () => {
     assert.strictEqual(packageJson.name, 'test-frontend-app');
   });
 
+  it('should materialize a SvelteKit frontend project successfully', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-sveltekit-app',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-sveltekit-app'),
+      frontendStack: 'sveltekit',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+    assert.ok(result.directoriesCreated > 0);
+    assert.ok(result.filesCreated > 0);
+
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'package.json')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'AGENTS.md')));
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, '.cursor', 'rules')));
+
+    // Verify scaffold files from templates/frontend-sveltekit/scaffold/ are present
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'app.html')), 'app.html from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'routes', '+layout.svelte')), '+layout.svelte from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'routes', '+page.svelte')), '+page.svelte from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'routes', 'layout.css')), 'layout.css from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.ts')), 'report-service.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'src', 'features', 'reports', 'report-service.test.ts')), 'report-service.test.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'vitest.config.ts')), 'vitest.config.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'playwright.config.ts')), 'playwright.config.ts from scaffold should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'svelte.config.js')), 'svelte.config.js from scaffold should exist');
+
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.strictEqual(packageJson.name, 'test-sveltekit-app');
+  });
+
   it('should materialize a backend project successfully', async () => {
     const ctx: CreateContext = {
       archetype: 'backend',

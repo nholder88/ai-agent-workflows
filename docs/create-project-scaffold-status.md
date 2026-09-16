@@ -86,12 +86,27 @@ Added comprehensive materialization tests (`cli/lib/materializer.test.ts`):
 ✅ No stacks invented outside the catalog  
 ✅ Standards (template-spec.yaml, platform contracts) remain authoritative
 
+### Priority Stacks (Recently Added)
+
+#### Frontend: SvelteKit (`sveltekit`)
+- **Location**: `templates/frontend-sveltekit/scaffold/`
+- **Contents**:
+  - Complete SvelteKit 2 application structure
+  - TypeScript configuration
+  - Skeleton UI (Tailwind + Cerberus theme)
+  - Vitest + Playwright test setup
+  - Svelte Stores + TanStack Query state management
+  - Sample features: reports, admin/feature-flags
+  - Real service layer with unit tests
+  - E2E test examples
+
 ## Out of Scope
 
 As specified in issue #48:
 - ❌ Nigel React preset overlay (#35)
 - ❌ Full e2e docs polish (#36)
 - ❌ Replacing materializer with Yeoman/Plop
+- ❌ Angular scaffold (deferred per issue #51)
 
 ## Next Steps
 
@@ -106,7 +121,8 @@ As specified in issue #48:
 ### Follow-On Issues
 - Issue #35: Nigel React preset system
 - Issue #36: E2E docs and polish
-- Issue #49+: Starters for other stacks (sveltekit, angular, go, dotnet, java, rust)
+- Issue #51: SvelteKit + Skeleton UI scaffold ✅ (Completed)
+- Future: Starters for other stacks (angular, go, dotnet, java, rust)
 
 ## Usage Examples
 
