@@ -76,17 +76,19 @@ describe('materializeProject', () => {
 
     assert.strictEqual(result.projectPath, ctx.outputPath);
 
-    // Verify preset dependencies in package.json
+    // Verify scaffold dependencies are preserved at their ORIGINAL versions
     const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
-    assert.ok(packageJson.dependencies['@tanstack/react-query'], 'TanStack Query should be in dependencies');
-    assert.ok(packageJson.dependencies['zustand'], 'Zustand should be in dependencies for Next.js');
+    assert.strictEqual(packageJson.dependencies['@tanstack/react-query'], '^5.59.0', 'Query should keep scaffold version');
+    assert.strictEqual(packageJson.dependencies['zustand'], '^5.0.0', 'Zustand should keep scaffold version');
     assert.ok(packageJson.devDependencies['tailwindcss'], 'Tailwind should be in devDependencies');
-    assert.ok(packageJson.devDependencies['vitest'], 'Vitest should be in devDependencies');
-    assert.ok(packageJson.devDependencies['playwright'], 'Playwright should be in devDependencies');
+    assert.strictEqual(packageJson.devDependencies['vitest'], '^2.1.0', 'Vitest should keep scaffold version');
+    assert.strictEqual(packageJson.devDependencies['@playwright/test'], '^1.48.0', 'Playwright should keep scaffold version');
 
-    // Verify preset config files
-    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tailwind.config.js')), 'tailwind.config.js should exist');
-    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'postcss.config.js')), 'postcss.config.js should exist');
+    // Verify NO duplicate config files (scaffold has .ts/.mjs)
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tailwind.config.ts')), 'Scaffold tailwind.config.ts should exist');
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'tailwind.config.js')), 'Should NOT create duplicate tailwind.config.js');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'postcss.config.mjs')), 'Scaffold postcss.config.mjs should exist');
+    assert.ok(!fs.existsSync(path.join(ctx.outputPath, 'postcss.config.js')), 'Should NOT create duplicate postcss.config.js');
     assert.ok(fs.existsSync(path.join(ctx.outputPath, 'vitest.config.ts')), 'vitest.config.ts should exist');
     assert.ok(fs.existsSync(path.join(ctx.outputPath, 'playwright.config.ts')), 'playwright.config.ts should exist');
 
@@ -126,24 +128,22 @@ describe('materializeProject', () => {
     assert.ok(packageJson.dependencies['svelte'], 'Svelte from scaffold should be preserved');
     assert.ok(packageJson.dependencies['@sveltejs/kit'], 'SvelteKit from scaffold should be preserved');
     
-    // Preset should ONLY add TanStack Svelte Query - nothing else
-    assert.ok(packageJson.dependencies['@tanstack/svelte-query'], 'TanStack Svelte Query should be added by preset');
+    // Scaffold already has TanStack Svelte Query ^5.59 - preset should not downgrade or change
+    assert.strictEqual(packageJson.dependencies['@tanstack/svelte-query'], '^5.59.0', 'Query should keep scaffold version ^5.59');
     assert.ok(!packageJson.dependencies['zustand'], 'Zustand should not be in SvelteKit');
     assert.ok(!packageJson.dependencies['@tanstack/react-query'], 'React Query should not be in SvelteKit');
 
-    // Verify preset did NOT add Tailwind 3, postcss, autoprefixer, vitest, playwright to devDependencies
-    // SvelteKit scaffold already has Tailwind 4 and test tools
-    const tailwindVersion = packageJson.devDependencies['tailwindcss'];
-    assert.ok(tailwindVersion, 'Tailwind from scaffold should exist');
-    assert.ok(!tailwindVersion.includes('^3.4'), 'Should not have Tailwind 3.4 from preset');
+    // Verify preset did NOT add ANY devDependencies (scaffold already has everything)
+    // SvelteKit scaffold has Tailwind 4, Vitest ^2.1, Playwright ^1.48
+    assert.strictEqual(packageJson.devDependencies['tailwindcss'], '^4.0.0', 'Should have Tailwind 4 from scaffold, not ^3.4 from preset');
+    assert.strictEqual(packageJson.devDependencies['vitest'], '^2.1.0', 'Should have Vitest ^2.1 from scaffold, not ^1.0 from preset');
+    assert.strictEqual(packageJson.devDependencies['@playwright/test'], '^1.48.0', 'Should have Playwright ^1.48 from scaffold, not ^1.40 from preset');
     
-    // Verify no preset-specific devDependency versions were added
-    assert.notStrictEqual(packageJson.devDependencies['postcss'], '^8.4.0', 'Should not have preset postcss version');
-    assert.notStrictEqual(packageJson.devDependencies['autoprefixer'], '^10.4.0', 'Should not have preset autoprefixer version');
-    assert.notStrictEqual(packageJson.devDependencies['vitest'], '^1.0.0', 'Should not have preset vitest version');
-    assert.notStrictEqual(packageJson.devDependencies['playwright'], '^1.40.0', 'Should not have preset playwright version');
+    // Verify no Tailwind 3 tooling was added
+    assert.ok(!packageJson.devDependencies['postcss'], 'Should not have postcss from preset');
+    assert.ok(!packageJson.devDependencies['autoprefixer'], 'Should not have autoprefixer from preset');
 
-    // Verify preset is documented
+    // Verify preset is documented (documents standards even when deps already exist)
     const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
     assert.ok(agentsMd.includes('Preset: Nigel React'), 'AGENTS.md should mention the preset');
     assert.ok(agentsMd.includes('TanStack Query'), 'AGENTS.md should mention TanStack Query');

@@ -414,9 +414,16 @@ async function generatePresetFiles(
   let filesCreated = 0;
 
   for (const [filename, content] of configFiles) {
-    const filePath = path.join(tempDir, filename);
-    // Only write if file doesn't already exist (don't overwrite scaffold configs)
-    if (!fs.existsSync(filePath)) {
+    // Check if ANY sibling config file exists (different extensions)
+    const baseName = path.basename(filename, path.extname(filename));
+    const extensions = ['.ts', '.js', '.mjs', '.cjs'];
+    const hasSibling = extensions.some(ext => {
+      const siblingPath = path.join(tempDir, baseName + ext);
+      return fs.existsSync(siblingPath);
+    });
+
+    if (!hasSibling) {
+      const filePath = path.join(tempDir, filename);
       fs.writeFileSync(filePath, content, 'utf8');
       filesCreated++;
     }

@@ -13,7 +13,8 @@ export interface PackageJsonOverlay {
 }
 
 /**
- * Apply preset overlays to a package.json object.
+ * Apply preset overlays to a package.json object using fill-gaps-only strategy.
+ * Never replaces existing dependencies - only adds missing ones.
  */
 export function applyPresetToPackageJson(
   pkg: Record<string, any>,
@@ -23,15 +24,33 @@ export function applyPresetToPackageJson(
   const overlay = getPackageJsonOverlay(preset, stackKey);
   
   if (overlay.dependencies) {
-    pkg.dependencies = { ...pkg.dependencies, ...overlay.dependencies };
+    pkg.dependencies = pkg.dependencies || {};
+    for (const [dep, version] of Object.entries(overlay.dependencies)) {
+      // Only add if not already in dependencies OR devDependencies (fill gaps only)
+      if (!pkg.dependencies[dep] && !(pkg.devDependencies && pkg.devDependencies[dep])) {
+        pkg.dependencies[dep] = version;
+      }
+    }
   }
   
   if (overlay.devDependencies) {
-    pkg.devDependencies = { ...pkg.devDependencies, ...overlay.devDependencies };
+    pkg.devDependencies = pkg.devDependencies || {};
+    for (const [dep, version] of Object.entries(overlay.devDependencies)) {
+      // Only add if not already in devDependencies OR dependencies (fill gaps only)
+      if (!pkg.devDependencies[dep] && !pkg.dependencies[dep]) {
+        pkg.devDependencies[dep] = version;
+      }
+    }
   }
   
   if (overlay.scripts) {
-    pkg.scripts = { ...pkg.scripts, ...overlay.scripts };
+    pkg.scripts = pkg.scripts || {};
+    for (const [script, command] of Object.entries(overlay.scripts)) {
+      // Only add if script doesn't exist (fill gaps only)
+      if (!pkg.scripts[script]) {
+        pkg.scripts[script] = command;
+      }
+    }
   }
   
   return pkg;
@@ -51,29 +70,27 @@ function getPackageJsonOverlay(preset: string, stackKey: string): PackageJsonOve
 /**
  * Nigel React preset: TanStack Query + Zustand + Tailwind + Vitest + Playwright
  * 
- * Note: SvelteKit scaffold already includes Skeleton + Tailwind 4 + Vitest + Playwright,
- * so we ONLY add TanStack Svelte Query without any devDependencies.
+ * Uses fill-gaps-only strategy - only adds dependencies that don't exist in scaffold.
+ * Never downgrades existing scaffold pins.
+ * 
+ * Note: Both Next.js and SvelteKit scaffolds already include most of these tools.
+ * Preset fills gaps and documents opinions in AGENTS.md.
  */
 function getNigelReactOverlay(stackKey: string): PackageJsonOverlay {
   if (stackKey === 'nextjs') {
+    // Next.js scaffold already has: Query ^5.59, Zustand ^5, Vitest ^2.1, Playwright ^1.48
+    // Only add Tailwind tooling if missing (fill gaps only)
     return {
-      dependencies: {
-        '@tanstack/react-query': '^5.0.0',
-        'zustand': '^4.5.0',
-      },
+      dependencies: {},
       devDependencies: {
         'tailwindcss': '^3.4.0',
         'postcss': '^8.4.0',
         'autoprefixer': '^10.4.0',
-        'vitest': '^1.0.0',
-        '@vitest/ui': '^1.0.0',
-        'playwright': '^1.40.0',
-        '@playwright/test': '^1.40.0',
       },
     };
   } else if (stackKey === 'sveltekit') {
-    // SvelteKit scaffold already has Skeleton + Tailwind 4 + Vitest + Playwright
-    // ONLY add TanStack Svelte Query - NO devDependencies overlay
+    // SvelteKit scaffold has: Tailwind 4, Vitest, Playwright
+    // Only add TanStack Svelte Query if missing (fill gaps only)
     return {
       dependencies: {
         '@tanstack/svelte-query': '^5.0.0',

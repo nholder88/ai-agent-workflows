@@ -168,11 +168,20 @@ ai-agent-pack-install create fullstack customer-portal --frontend sveltekit --ba
 
 ### Presets
 
+Presets provide curated, opinionated defaults for specific use cases. Presets work as **overlays** that fill gaps and document standards without replacing or downgrading existing scaffold dependencies.
+
+**How Presets Work:**
+- **Fill-gaps-only**: Presets add missing dependencies but never replace or downgrade existing scaffold versions
+- **Document opinions**: Standards are documented in `AGENTS.md`, `.cursor/rules`, and `conventions.md`
+- **Preserve scaffold configs**: No config file duplication or overwriting
+
 **`nigel-react`** — Standardized React project defaults (applies to nextjs, sveltekit)
-- **State Management:** TanStack Query (server) + Zustand (client, Next.js only) 
-- **Styling:** Tailwind CSS with utility-first patterns (Next.js only; SvelteKit uses scaffold Tailwind 4)
+- **State Management:** TanStack Query (server) + Zustand (client)
+- **Styling:** Tailwind CSS
 - **Testing:** Vitest (unit) + Playwright (E2E)
-- **Generated artifacts:** Project-local AGENTS.md, .cursor/rules, and conventions.md encode these standards
+- **Next.js**: Adds Tailwind 3 tooling; scaffold already has Query ^5.59, Zustand ^5, Vitest ^2.1, Playwright ^1.48
+- **SvelteKit**: Adds nothing; scaffold already has Query ^5.59, Tailwind 4, Vitest ^2.1, Playwright ^1.48
+- **Generated artifacts:** Project-local AGENTS.md, .cursor/rules, and conventions.md document these standards
 
 ### Available Stacks
 
