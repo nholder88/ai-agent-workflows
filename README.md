@@ -34,85 +34,102 @@ Node 20 + TypeScript CLI built on `@inquirer/prompts` and `ajv`. Agents are plai
 
 ## Getting started
 
-### From npm (recommended)
+This package has **two modes**: **install mode** (installs agents/skills into your IDE) and **create mode** (scaffolds new projects with opinionated starters).
 
-The package is published as a **private** scoped module (`@nholder88/ai-agent-workflows-tools`). Installers need npm login and access to that scope (or a token with read access).
+### Install Mode — Add agents & skills to existing projects
+
+Install the curated agent pack and skills into VS Code, Cursor, or Claude Code.
+
+**From npm (recommended):**
 
 ```bash
-# Interactive install into VS Code / Cursor / Claude Code user paths
+# Interactive — prompts for IDE targets
 npx @nholder88/ai-agent-workflows-tools
+
+# Non-interactive — specify targets directly
+npx @nholder88/ai-agent-workflows-tools --yes --targets vscode,cursor
 
 # Or install globally
 npm install -g @nholder88/ai-agent-workflows-tools
 ai-agent-pack-install
-
-# Non-interactive
-npx @nholder88/ai-agent-workflows-tools --yes --targets vscode,cursor
-
-# Help
-ai-agent-pack-install --help
 ```
 
-### From a clone (development)
+**From a clone (development):**
 
 ```bash
 npm install
 
-# Interactive (same CLI as above)
+# Interactive
 npm run pack:install
 
 # Non-interactive
 npm run pack:install -- --yes --targets vscode,cursor
-
-# Validate template parity after editing templates/**
-npm run templates:test-parity
-npm run templates:validate-parity
 ```
 
-## Create-Project Scaffolding (Preview)
+### Create Mode — Scaffold new projects from templates
 
-The CLI now includes a `create` mode for scaffolding new projects from templates:
+Generate new projects with complete scaffolds, real starter code, and project-local standards artifacts.
+
+**Interactive — wizard guides you through options:**
 
 ```bash
-# Interactive wizard
+# Start the wizard
+npx @nholder88/ai-agent-workflows-tools create
+
+# Or with global install
 ai-agent-pack-install create
-
-# Scaffold a frontend project
-ai-agent-pack-install create frontend my-app
-
-# Scaffold a backend API
-ai-agent-pack-install create backend api-service --stack python
-
-# Scaffold fullstack application
-ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
-
-# Scaffold CLI tool or library
-ai-agent-pack-install create cli my-tool
-ai-agent-pack-install create lib my-package
 ```
 
-**Archetypes:**
-- `frontend` — Browser-based UI application (choose from nextjs, sveltekit; angular deferred)
-- `backend` — API service or backend (choose from node_nestjs, python, go, dotnet, java, rust)
-- `fullstack` — Combined frontend + backend
-- `lib` — Reusable package or module
-- `cli` — Command-line tool or utility
+**Non-interactive — specify archetype and stacks:**
 
-**Frontend Stacks:**
-- `nextjs` — Next.js 15 with Zustand + TanStack Query (✅ Full scaffold)
-- `sveltekit` — SvelteKit 2 with Skeleton UI + TanStack Query (✅ Full scaffold)
-- `angular` — Angular 17+ with NgRx (⏳ Deferred)
+```bash
+# Frontend — Next.js with TanStack Query + Zustand
+npx @nholder88/ai-agent-workflows-tools create frontend my-nextjs-app
+# Output: src/app/ with layouts, providers, pages, features/, AGENTS.md, .cursor/rules
 
-**Stack Catalog Contract:**  
-Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
+# Frontend — SvelteKit with Skeleton UI + TanStack Query
+npx @nholder88/ai-agent-workflows-tools create frontend my-sveltekit-app --stack sveltekit
+# Output: src/routes/ with Svelte components, features/, AGENTS.md, .cursor/rules
 
-**Current Status:**  
-✅ Command surface (issue #32)  
-✅ Template materialization engine (issue #33)  
-✅ Real scaffold starters for nextjs, node_nestjs, and python (issue #48)  
-✅ Template variable rendering and generated AGENTS.md/.cursor/rules per project
+# Backend — NestJS API with TypeORM
+npx @nholder88/ai-agent-workflows-tools create backend api-service --stack node_nestjs
+# Output: src/modules with controllers/services/DTOs, tests/, AGENTS.md, .cursor/rules
 
-Projects now include real starter code with proper structure, not just empty directories. Preset system coming in issue #35.
+# Backend — FastAPI Python service
+npx @nholder88/ai-agent-workflows-tools create backend api-service --stack python
+# Output: src/api/ with routers, pytest tests, AGENTS.md, .cursor/rules
+
+# Fullstack — Next.js frontend + Python backend
+npx @nholder88/ai-agent-workflows-tools create fullstack customer-portal --frontend nextjs --backend python
+# Output: Combined frontend + backend scaffolds with shared standards
+```
+
+**What gets generated:**
+
+All scaffolds include:
+- ✅ Real starter code (not empty directories)
+- ✅ `AGENTS.md` — Project-local agent manifest with stack-specific agents
+- ✅ `.cursor/rules` — Project conventions (state management, testing, capabilities)
+- ✅ `docs/conventions.md` — Stack choices and contract version traceability
+- ✅ Unit + E2E test setup with sample tests
+- ✅ CI workflow template
+
+**Available Stacks:**
+
+| Archetype | Stack Key | Framework | Status |
+|-----------|-----------|-----------|--------|
+| `frontend` | `nextjs` | Next.js 15 + TanStack Query + Zustand | ✅ Full scaffold |
+| `frontend` | `sveltekit` | SvelteKit 2 + Skeleton UI + TanStack Query | ✅ Full scaffold |
+| `frontend` | `angular` | Angular 17+ + NgRx | ⏳ Deferred |
+| `backend` | `node_nestjs` | NestJS 10 + TypeORM | ✅ Full scaffold |
+| `backend` | `python` | FastAPI + Pydantic | ✅ Full scaffold |
+| `backend` | `go` | Fiber | ⏳ Minimal scaffold |
+| `backend` | `dotnet` | .NET 8 | ⏳ Minimal scaffold |
+| `backend` | `java` | Spring Boot | ⏳ Minimal scaffold |
+| `backend` | `rust` | Axum | ⏳ Minimal scaffold |
+| `fullstack` | Mix of above | Combines frontend + backend | ✅ Functional |
+
+See `docs/scaffolding-guide.md` for detailed usage and `templates/shared/stack-catalog.yaml` for the complete allowlist.
 
 ## Status
 

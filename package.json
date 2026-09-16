@@ -41,10 +41,10 @@
     "bin"
   ],
   "scripts": {
-    "templates:validate-parity": "node --import tsx templates/tools/validate-parity.ts --root .",
-    "templates:test-parity": "node --import tsx --test templates/tools/validate-parity.test.ts",
-    "pack:install": "node --import tsx cli/pack-install.ts",
-    "pack:test": "node --import tsx --test cli/lib/*.test.ts",
+    "templates:validate-parity": "npx tsx templates/tools/validate-parity.ts --root .",
+    "templates:test-parity": "npx tsx --test templates/tools/validate-parity.test.ts",
+    "pack:install": "npx tsx cli/pack-install.ts",
+    "pack:test": "npx tsx --test cli/lib/*.test.ts cli/create-project-e2e.test.ts",
     "prepublishOnly": "npm run pack:test"
   },
   "dependencies": {
