@@ -5,6 +5,40 @@ import type { ResolvedContext } from './resolver.js';
 import type { CreateContext } from '../create-project.js';
 import { logger } from './logger.js';
 
+/**
+ * Builds preset override information based on preset name and stack.
+ */
+function buildPresetOverride(presetName: string, stackKey: string): PresetOverride {
+  if (presetName === 'nigel-react') {
+    const override: PresetOverride = {
+      name: 'Nigel React',
+      serverState: 'TanStack Query',
+      styling: 'Tailwind CSS',
+      unitTesting: 'Vitest',
+      e2eTesting: 'Playwright',
+    };
+
+    if (stackKey === 'nextjs') {
+      override.clientState = 'Zustand';
+    } else if (stackKey === 'sveltekit') {
+      override.clientState = 'Svelte Stores + TanStack Query';
+    }
+
+    return override;
+  }
+
+  return { name: presetName };
+}
+
+export interface PresetOverride {
+  name: string;
+  serverState?: string;
+  clientState?: string;
+  styling?: string;
+  unitTesting?: string;
+  e2eTesting?: string;
+}
+
 export interface TemplateVariables {
   projectName: string;
   stackKey: string;
@@ -15,6 +49,7 @@ export interface TemplateVariables {
     clientState: string;
     formState: string;
   };
+  preset?: PresetOverride;
   requiredCapabilities: string[];
   requiredRoutes: string[];
   requiredIntegrations: string[];
@@ -71,10 +106,15 @@ export function buildTemplateVariables(resolved: ResolvedContext): TemplateVaria
     variables.e2eTestFramework = spec.testing_starter.e2e.framework;
   }
 
+  if (ctx.preset) {
+    variables.preset = buildPresetOverride(ctx.preset, stackKey);
+  }
+
   logger.info('template_variables_built', {
     projectName: variables.projectName,
     framework: variables.framework,
     stackKey: variables.stackKey,
+    preset: ctx.preset,
   });
 
   return variables;

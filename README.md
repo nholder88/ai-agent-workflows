@@ -110,8 +110,8 @@ ai-agent-pack-install create frontend my-app
 # SvelteKit frontend
 ai-agent-pack-install create frontend my-app --stack sveltekit
 
-# With Nigel's React preset (coming in #35)
-ai-agent-pack-install create frontend my-app --preset nigel-react
+# With Nigel React preset (standardized React defaults)
+ai-agent-pack-install create frontend my-app --stack nextjs --preset nigel-react --yes
 ```
 
 **Generated artifacts:**
@@ -166,6 +166,14 @@ ai-agent-pack-install create fullstack customer-portal --frontend sveltekit --ba
 - Shared `AGENTS.md` referencing both frontend and backend agents
 - Unified `.cursor/rules` with full-stack conventions
 
+### Presets
+
+**`nigel-react`** — Standardized React project defaults (applies to nextjs, sveltekit)
+- **State Management:** TanStack Query (server) + Zustand (client, Next.js only) 
+- **Styling:** Tailwind CSS with utility-first patterns (Next.js only; SvelteKit uses scaffold Tailwind 4)
+- **Testing:** Vitest (unit) + Playwright (E2E)
+- **Generated artifacts:** Project-local AGENTS.md, .cursor/rules, and conventions.md encode these standards
+
 ### Available Stacks
 
 **Frontend:**
@@ -215,11 +223,13 @@ Generated projects reference Hermes at runtime but never embed credentials or mo
 ✅ Template materialization engine (issue #33)  
 ✅ Real scaffold starters for nextjs, sveltekit, node_nestjs, python (issues #48, #51)  
 ✅ Template variable rendering and generated standards artifacts  
-⏳ Nigel React preset system (issue #35)  
-⏳ Documentation and e2e tests (issue #36)
+✅ Nigel React preset system (issue #35)  
+✅ Documentation and e2e tests (issue #36)
+
+Projects now include real starter code with proper structure, not just empty directories. The preset system applies opinionated defaults (state management, styling, testing) and documents them in generated project-local artifacts.
 
 ## Status
 
-**Current:** working - 85% complete
+**Current:** working - 95% complete
 
-Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine and real scaffold starters functional (issues #32-#33, #48). Primary remaining work is preset system (#35), documentation polish (#36), first npm release, and optional platform installers.
+Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine, real scaffold starters, and preset system functional (issues #32-#33, #35, #36, #48). Primary remaining work is first npm release and optional platform installers.

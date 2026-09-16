@@ -61,6 +61,78 @@ describe('materializeProject', () => {
     assert.strictEqual(packageJson.name, 'test-frontend-app');
   });
 
+  it('should apply nigel-react preset to nextjs project', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-preset-app',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-preset-app'),
+      frontendStack: 'nextjs',
+      preset: 'nigel-react',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+
+    // Verify preset dependencies in package.json
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['@tanstack/react-query'], 'TanStack Query should be in dependencies');
+    assert.ok(packageJson.dependencies['zustand'], 'Zustand should be in dependencies for Next.js');
+    assert.ok(packageJson.devDependencies['tailwindcss'], 'Tailwind should be in devDependencies');
+    assert.ok(packageJson.devDependencies['vitest'], 'Vitest should be in devDependencies');
+    assert.ok(packageJson.devDependencies['playwright'], 'Playwright should be in devDependencies');
+
+    // Verify preset config files
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'tailwind.config.js')), 'tailwind.config.js should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'postcss.config.js')), 'postcss.config.js should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'vitest.config.ts')), 'vitest.config.ts should exist');
+    assert.ok(fs.existsSync(path.join(ctx.outputPath, 'playwright.config.ts')), 'playwright.config.ts should exist');
+
+    // Verify preset is documented in AGENTS.md
+    const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
+    assert.ok(agentsMd.includes('Preset: Nigel React'), 'AGENTS.md should mention the preset');
+    assert.ok(agentsMd.includes('TanStack Query'), 'AGENTS.md should mention TanStack Query');
+    assert.ok(agentsMd.includes('Zustand'), 'AGENTS.md should mention Zustand');
+
+    // Verify preset is documented in .cursor/rules
+    const cursorRules = fs.readFileSync(path.join(ctx.outputPath, '.cursor', 'rules'), 'utf8');
+    assert.ok(cursorRules.includes('Nigel React'), 'Cursor rules should mention the preset');
+    assert.ok(cursorRules.includes('TanStack Query'), 'Cursor rules should mention TanStack Query');
+
+    // Verify preset is documented in conventions.md
+    const conventions = fs.readFileSync(path.join(ctx.outputPath, 'docs', 'conventions.md'), 'utf8');
+    assert.ok(conventions.includes('Nigel React'), 'Conventions should mention the preset');
+  });
+
+  it('should apply nigel-react preset to sveltekit project', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-sveltekit-preset-app',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-sveltekit-preset-app'),
+      frontendStack: 'sveltekit',
+      preset: 'nigel-react',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    const result = await materializeProject(ctx);
+
+    assert.strictEqual(result.projectPath, ctx.outputPath);
+
+    // Verify preset dependencies in package.json
+    const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
+    assert.ok(packageJson.dependencies['@tanstack/svelte-query'], 'TanStack Svelte Query should be in dependencies');
+    assert.ok(!packageJson.dependencies['zustand'], 'Zustand should not be in SvelteKit (uses stores)');
+    assert.ok(packageJson.devDependencies['tailwindcss'], 'Tailwind should be in devDependencies');
+
+    // Verify preset is documented
+    const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
+    assert.ok(agentsMd.includes('Preset: Nigel React'), 'AGENTS.md should mention the preset');
+    assert.ok(agentsMd.includes('TanStack Query'), 'AGENTS.md should mention TanStack Query');
+  });
+
   it('should materialize a SvelteKit frontend project successfully', async () => {
     const ctx: CreateContext = {
       archetype: 'frontend',

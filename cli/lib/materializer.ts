@@ -14,6 +14,7 @@ import * as os from 'node:os';
 import { resolveArchetype, type ResolvedContext } from './resolver.js';
 import { buildTemplateVariables, renderTemplate, type TemplateVariables } from './template-renderer.js';
 import { generateAgentsMdContent, generateCursorRulesContent, generateConventionsMdContent } from './standards-templates.js';
+import { applyPresetToPackageJson, generatePresetConfigFiles } from './preset-overlays.js';
 import { logger } from './logger.js';
 import type { CreateContext } from '../create-project.js';
 
@@ -212,15 +213,26 @@ async function materializeFrontendStack(
   if (!fs.existsSync(packageJsonPath)) {
     fs.writeFileSync(
       packageJsonPath,
-      generateFrontendPackageJson(stack.stackDef.key, variables),
+      generateFrontendPackageJson(stack.stackDef.key, variables, variables.createContext.preset),
       'utf8'
     );
     filesCreated++;
   } else {
-    // Scaffold provided package.json - render template variables
-    const content = fs.readFileSync(packageJsonPath, 'utf8');
-    const rendered = renderTemplate(content, variables);
-    fs.writeFileSync(packageJsonPath, rendered, 'utf8');
+    // Scaffold provided package.json - render template variables, then apply preset
+    let content = fs.readFileSync(packageJsonPath, 'utf8');
+    content = renderTemplate(content, variables);
+    
+    if (variables.createContext.preset) {
+      const pkg = JSON.parse(content);
+      const updatedPkg = applyPresetToPackageJson(pkg, variables.createContext.preset, stack.stackDef.key);
+      content = JSON.stringify(updatedPkg, null, 2);
+    }
+    
+    fs.writeFileSync(packageJsonPath, content, 'utf8');
+  }
+
+  if (variables.createContext.preset) {
+    filesCreated += await generatePresetFiles(tempDir, variables.createContext.preset, stack.stackDef.key, variables);
   }
 
   // Only generate tsconfig.json if scaffold didn't provide one
@@ -392,7 +404,24 @@ async function generateStandardsArtifacts(
   return filesCreated;
 }
 
-function generateFrontendPackageJson(stackKey: string, variables: TemplateVariables): string {
+async function generatePresetFiles(
+  tempDir: string,
+  preset: string,
+  stackKey: string,
+  variables: TemplateVariables
+): Promise<number> {
+  const configFiles = generatePresetConfigFiles(preset, stackKey, variables);
+  let filesCreated = 0;
+
+  for (const [filename, content] of configFiles) {
+    fs.writeFileSync(path.join(tempDir, filename), content, 'utf8');
+    filesCreated++;
+  }
+
+  return filesCreated;
+}
+
+function generateFrontendPackageJson(stackKey: string, variables: TemplateVariables, preset?: string): string {
   const pkg: Record<string, any> = {
     name: variables.projectName,
     version: '0.1.0',
@@ -465,6 +494,10 @@ function generateFrontendPackageJson(stackKey: string, variables: TemplateVariab
       '@types/react': '^18.3.0',
       '@types/react-dom': '^18.3.0',
     };
+  }
+
+  if (preset) {
+    return JSON.stringify(applyPresetToPackageJson(pkg, preset, stackKey), null, 2);
   }
 
   return JSON.stringify(pkg, null, 2);
