@@ -69,53 +69,91 @@ npm run templates:test-parity
 npm run templates:validate-parity
 ```
 
-## Create-Project Scaffolding (Preview)
+## Two Modes: Install vs Create
 
-The CLI now includes a `create` mode for scaffolding new projects from templates:
+This pack operates in **two distinct modes**:
+
+### Install Mode — Add agents/templates/skills to existing projects
+
+**Use when:** You have an existing project and want to add AI agents, templates, and skills to your workspace.
 
 ```bash
-# Interactive wizard
-ai-agent-pack-install create
+# Interactive install into VS Code / Cursor user paths
+npx @nholder88/ai-agent-workflows-tools
 
-# Scaffold a frontend project
-ai-agent-pack-install create frontend my-app
-
-# Scaffold a backend API
-ai-agent-pack-install create backend api-service --stack python
-
-# Scaffold fullstack application
-ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
-
-# Scaffold CLI tool or library
-ai-agent-pack-install create cli my-tool
-ai-agent-pack-install create lib my-package
+# Non-interactive
+npx @nholder88/ai-agent-workflows-tools --yes --targets vscode,cursor
 ```
 
-**Archetypes:**
-- `frontend` — Browser-based UI application (choose from nextjs, sveltekit; angular deferred)
-- `backend` — API service or backend (choose from node_nestjs, python, go, dotnet, java, rust)
-- `fullstack` — Combined frontend + backend
-- `lib` — Reusable package or module
-- `cli` — Command-line tool or utility
+**What it does:**
+- Installs 32 agent definitions to your IDE's prompts folder
+- Copies skills library to `.github/skills/` in your workspace
+- Adds template references for your stack
+- Does NOT modify your existing code
 
-**Frontend Stacks:**
-- `nextjs` — Next.js 15 with Zustand + TanStack Query (✅ Full scaffold)
-- `sveltekit` — SvelteKit 2 with Skeleton UI + TanStack Query (✅ Full scaffold)
-- `angular` — Angular 17+ with NgRx (⏳ Deferred)
+### Create Mode — Scaffold new projects from templates
+
+**Use when:** You're starting a new project and want a complete scaffold with agents, standards, and working starter code.
+
+```bash
+# Interactive wizard (recommended for first-time use)
+ai-agent-pack-install create
+
+# Scaffold a Next.js frontend
+ai-agent-pack-install create frontend my-nextjs-app
+# or explicit stack:
+ai-agent-pack-install create frontend my-app --stack nextjs
+
+# Scaffold a SvelteKit frontend
+ai-agent-pack-install create frontend my-sveltekit-app --stack sveltekit
+
+# Scaffold a NestJS backend
+ai-agent-pack-install create backend api-service --stack node_nestjs
+
+# Scaffold a Python/FastAPI backend
+ai-agent-pack-install create backend api-service --stack python
+
+# Scaffold fullstack (Next.js + Python)
+ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
+
+# Scaffold fullstack (SvelteKit + NestJS)
+ai-agent-pack-install create fullstack my-app --frontend sveltekit --backend node_nestjs
+```
+
+**What it creates:**
+- Complete project structure with working code
+- Framework-specific configuration (tsconfig.json, vite.config.ts, etc.)
+- State management setup (Zustand + TanStack Query for frontend)
+- Testing framework configuration (Vitest + Playwright for frontend, Jest for NestJS, pytest for Python)
+- Generated `AGENTS.md` with project-specific agents
+- Generated `.cursor/rules` encoding your stack conventions
+- Generated `docs/conventions.md` with detailed patterns
+- Sample features (reports, admin/feature-flags) with tests
+
+**Available Archetypes:**
+- `frontend` — Browser-based UI application
+- `backend` — API service or backend application
+- `fullstack` — Combined frontend + backend
+
+**Implemented Frontend Stacks:**
+- ✅ `nextjs` — Next.js 15 with App Router, Zustand + TanStack Query, Vitest + Playwright
+- ✅ `sveltekit` — SvelteKit 2 with Skeleton UI, TanStack Query, Vitest + Playwright
+
+**Implemented Backend Stacks:**
+- ✅ `node_nestjs` — NestJS 10 with TypeORM, Swagger, Jest
+- ✅ `python` — FastAPI with Pydantic, pytest
+- ✅ `go` — Fiber (minimal scaffold)
+
+**Deferred/Not Implemented:**
+- ⏳ `angular` — Angular 17+ (frontend, deferred to future release)
+- ⏳ `lib` — Reusable package archetype (not yet implemented)
+- ⏳ `cli` — Command-line tool archetype (not yet implemented)
 
 **Stack Catalog Contract:**  
-Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
-
-**Current Status:**  
-✅ Command surface (issue #32)  
-✅ Template materialization engine (issue #33)  
-✅ Real scaffold starters for nextjs, node_nestjs, and python (issue #48)  
-✅ Template variable rendering and generated AGENTS.md/.cursor/rules per project
-
-Projects now include real starter code with proper structure, not just empty directories. Preset system coming in issue #35.
+Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. See `docs/create-project-catalog-contract.md` for the contract and `docs/scaffolding-guide.md` for full documentation.
 
 ## Status
 
-**Current:** working - 85% complete
+**Current:** working - 90% complete
 
-Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine and real scaffold starters functional (issues #32-#33, #48). Primary remaining work is preset system (#35), documentation polish (#36), first npm release, and optional platform installers.
+Core installer, agents, templates, and tests are in place. Create-project scaffolding with template materialization engine and real scaffold starters functional (issues #32-#33, #48). Documentation and E2E testing complete (issue #36). Primary remaining work is preset system (#35), first npm release, and optional platform installers.
