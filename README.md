@@ -69,50 +69,154 @@ npm run templates:test-parity
 npm run templates:validate-parity
 ```
 
-## Create-Project Scaffolding (Preview)
+## Two Modes: Install vs Create
 
-The CLI now includes a `create` mode for scaffolding new projects from templates:
+This CLI operates in two distinct modes:
+
+### Install Mode (Default)
+Installs agents, skills, and templates into **existing** IDE configurations (VS Code, Cursor).
+
+```bash
+# Interactive install into VS Code / Cursor prompts folders
+npx @nholder88/ai-agent-workflows-tools
+
+# Non-interactive install
+npx @nholder88/ai-agent-workflows-tools --yes --targets vscode,cursor
+```
+
+**What it does:** Copies agent definitions, skills, and template references into your IDE's prompts directory. No project files are created.
+
+### Create Mode (Project Scaffolding)
+Scaffolds **new projects** from templates with real application code, standards artifacts, and stack-specific agent configurations.
 
 ```bash
 # Interactive wizard
 ai-agent-pack-install create
 
-# Scaffold a frontend project
-ai-agent-pack-install create frontend my-app
-
-# Scaffold a backend API
-ai-agent-pack-install create backend api-service --stack python
-
-# Scaffold fullstack application
-ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
-
-# Scaffold CLI tool or library
-ai-agent-pack-install create cli my-tool
-ai-agent-pack-install create lib my-package
+# Scaffold specific project types (see examples below)
+ai-agent-pack-install create <archetype> <name> [options]
 ```
 
-**Archetypes:**
-- `frontend` — Browser-based UI application (choose from nextjs, sveltekit; angular deferred)
-- `backend` — API service or backend (choose from node_nestjs, python, go, dotnet, java, rust)
-- `fullstack` — Combined frontend + backend
-- `lib` — Reusable package or module
-- `cli` — Command-line tool or utility
+**What it does:** Creates a complete project directory with source code, tests, configuration, and generated standards artifacts (`AGENTS.md`, `.cursor/rules`, conventions).
 
-**Frontend Stacks:**
+## Create Mode Examples
+
+### Frontend Projects
+
+```bash
+# Next.js frontend (default)
+ai-agent-pack-install create frontend my-app
+
+# SvelteKit frontend
+ai-agent-pack-install create frontend my-app --stack sveltekit
+
+# With Nigel's React preset (coming in #35)
+ai-agent-pack-install create frontend my-app --preset nigel-react
+```
+
+**Generated artifacts:**
+- Complete Next.js or SvelteKit app with App Router / SvelteKit routing
+- Zustand + TanStack Query state management (Next.js) or Svelte stores + TanStack Query (SvelteKit)
+- Sample features: reports, admin/feature-flags
+- Vitest unit tests + Playwright e2e tests
+- `AGENTS.md` with stack-specific agents
+- `.cursor/rules` encoding state management conventions
+
+### Backend Projects
+
+```bash
+# NestJS backend (default)
+ai-agent-pack-install create backend api-service
+
+# FastAPI Python backend
+ai-agent-pack-install create backend api-service --stack python
+
+# Golang Fiber backend
+ai-agent-pack-install create backend api-service --stack go
+
+# .NET Core backend
+ai-agent-pack-install create backend api-service --stack dotnet
+
+# Spring Boot Java backend
+ai-agent-pack-install create backend api-service --stack java
+
+# Rust Axum backend
+ai-agent-pack-install create backend api-service --stack rust
+```
+
+**Generated artifacts:**
+- Complete backend service with health, reports, and admin endpoints
+- TypeORM (NestJS), Pydantic (FastAPI), or equivalent for other stacks
+- Unit and e2e tests
+- `AGENTS.md` with backend-specific agents
+- `.cursor/rules` with API conventions
+
+### Fullstack Projects
+
+```bash
+# Next.js frontend + FastAPI backend
+ai-agent-pack-install create fullstack customer-portal --frontend nextjs --backend python
+
+# SvelteKit frontend + NestJS backend
+ai-agent-pack-install create fullstack customer-portal --frontend sveltekit --backend node_nestjs
+```
+
+**Generated artifacts:**
+- Both frontend and backend scaffolds in one project
+- Shared `AGENTS.md` referencing both frontend and backend agents
+- Unified `.cursor/rules` with full-stack conventions
+
+### Available Stacks
+
+**Frontend:**
 - `nextjs` — Next.js 15 with Zustand + TanStack Query (✅ Full scaffold)
 - `sveltekit` — SvelteKit 2 with Skeleton UI + TanStack Query (✅ Full scaffold)
 - `angular` — Angular 17+ with NgRx (⏳ Deferred)
 
-**Stack Catalog Contract:**  
-Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single allowlist). A stack appears in the CLI **only if** it has complete standards and templates in this repo. To add new options: create templates and standards first, then add a catalog entry. See `docs/create-project-catalog-contract.md` for details.
+**Backend:**
+- `node_nestjs` — NestJS with TypeORM (✅ Full scaffold)
+- `python` — FastAPI with Pydantic (✅ Full scaffold)
+- `go` — Fiber framework (✅ Catalog entry)
+- `dotnet` — ASP.NET Core (✅ Catalog entry)
+- `java` — Spring Boot (✅ Catalog entry)
+- `rust` — Axum framework (✅ Catalog entry)
 
-**Current Status:**  
+**Note:** Stacks marked "Catalog entry" have standards defined but scaffold implementation is pending. Interactive mode will show only fully implemented stacks.
+
+### Stack Catalog Contract
+
+Available stack options are loaded from `templates/shared/stack-catalog.yaml` (the single source of truth). A stack appears in the CLI **only if** it has complete standards and templates in this repo.
+
+**To add a new stack:**
+1. Create templates and standards in `templates/{stack}/`
+2. Add catalog entry in `templates/shared/stack-catalog.yaml`
+3. CLI automatically picks up the new option
+
+See `docs/create-project-catalog-contract.md` for the complete contract.
+
+### Scaffolding vs Hermes Boundary
+
+**This repo owns:**
+- Engineering standards (state management, testing, conventions)
+- Template specifications and platform contracts
+- Skills and agent definitions
+- Generated project-local rules
+
+**Hermes (separate system) owns:**
+- OpenRouter API keys and credentials
+- Model routing policy
+- Provider selection
+
+Generated projects reference Hermes at runtime but never embed credentials or model configuration. See `docs/create-project-architecture.md` for the complete architecture.
+
+### Current Status
+
 ✅ Command surface (issue #32)  
 ✅ Template materialization engine (issue #33)  
-✅ Real scaffold starters for nextjs, node_nestjs, and python (issue #48)  
-✅ Template variable rendering and generated AGENTS.md/.cursor/rules per project
-
-Projects now include real starter code with proper structure, not just empty directories. Preset system coming in issue #35.
+✅ Real scaffold starters for nextjs, sveltekit, node_nestjs, python (issues #48, #51)  
+✅ Template variable rendering and generated standards artifacts  
+⏳ Nigel React preset system (issue #35)  
+⏳ Documentation and e2e tests (issue #36)
 
 ## Status
 

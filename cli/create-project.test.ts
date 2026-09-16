@@ -191,11 +191,10 @@ describe('create-project argument validation', () => {
       projectName: 'my-lib',
     };
 
-    const ctx = validateCreateArgs(args);
-    assert.strictEqual(ctx.archetype, 'lib');
-    assert.strictEqual(ctx.projectName, 'my-lib');
-    assert.strictEqual(ctx.frontendStack, undefined);
-    assert.strictEqual(ctx.backendStack, undefined);
+    // lib archetype is not yet implemented, should throw
+    assert.throws(() => validateCreateArgs(args), (err: Error) => {
+      return err.message.includes('not yet implemented');
+    });
   });
 
   it('validates cli archetype without stacks', () => {
@@ -205,11 +204,10 @@ describe('create-project argument validation', () => {
       projectName: 'my-tool',
     };
 
-    const ctx = validateCreateArgs(args);
-    assert.strictEqual(ctx.archetype, 'cli');
-    assert.strictEqual(ctx.projectName, 'my-tool');
-    assert.strictEqual(ctx.frontendStack, undefined);
-    assert.strictEqual(ctx.backendStack, undefined);
+    // cli archetype is not yet implemented, should throw
+    assert.throws(() => validateCreateArgs(args), (err: Error) => {
+      return err.message.includes('not yet implemented');
+    });
   });
 
   it('resolves output path from project name', () => {
