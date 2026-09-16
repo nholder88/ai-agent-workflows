@@ -414,8 +414,12 @@ async function generatePresetFiles(
   let filesCreated = 0;
 
   for (const [filename, content] of configFiles) {
-    fs.writeFileSync(path.join(tempDir, filename), content, 'utf8');
-    filesCreated++;
+    const filePath = path.join(tempDir, filename);
+    // Only write if file doesn't already exist (don't overwrite scaffold configs)
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, content, 'utf8');
+      filesCreated++;
+    }
   }
 
   return filesCreated;

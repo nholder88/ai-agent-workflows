@@ -121,11 +121,27 @@ describe('materializeProject', () => {
 
     assert.strictEqual(result.projectPath, ctx.outputPath);
 
-    // Verify preset dependencies in package.json
+    // Verify scaffold dependencies are preserved
     const packageJson = JSON.parse(fs.readFileSync(path.join(ctx.outputPath, 'package.json'), 'utf8'));
-    assert.ok(packageJson.dependencies['@tanstack/svelte-query'], 'TanStack Svelte Query should be in dependencies');
-    assert.ok(!packageJson.dependencies['zustand'], 'Zustand should not be in SvelteKit (uses stores)');
-    assert.ok(packageJson.devDependencies['tailwindcss'], 'Tailwind should be in devDependencies');
+    assert.ok(packageJson.dependencies['svelte'], 'Svelte from scaffold should be preserved');
+    assert.ok(packageJson.dependencies['@sveltejs/kit'], 'SvelteKit from scaffold should be preserved');
+    
+    // Preset should ONLY add TanStack Svelte Query - nothing else
+    assert.ok(packageJson.dependencies['@tanstack/svelte-query'], 'TanStack Svelte Query should be added by preset');
+    assert.ok(!packageJson.dependencies['zustand'], 'Zustand should not be in SvelteKit');
+    assert.ok(!packageJson.dependencies['@tanstack/react-query'], 'React Query should not be in SvelteKit');
+
+    // Verify preset did NOT add Tailwind 3, postcss, autoprefixer, vitest, playwright to devDependencies
+    // SvelteKit scaffold already has Tailwind 4 and test tools
+    const tailwindVersion = packageJson.devDependencies['tailwindcss'];
+    assert.ok(tailwindVersion, 'Tailwind from scaffold should exist');
+    assert.ok(!tailwindVersion.includes('^3.4'), 'Should not have Tailwind 3.4 from preset');
+    
+    // Verify no preset-specific devDependency versions were added
+    assert.notStrictEqual(packageJson.devDependencies['postcss'], '^8.4.0', 'Should not have preset postcss version');
+    assert.notStrictEqual(packageJson.devDependencies['autoprefixer'], '^10.4.0', 'Should not have preset autoprefixer version');
+    assert.notStrictEqual(packageJson.devDependencies['vitest'], '^1.0.0', 'Should not have preset vitest version');
+    assert.notStrictEqual(packageJson.devDependencies['playwright'], '^1.40.0', 'Should not have preset playwright version');
 
     // Verify preset is documented
     const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');

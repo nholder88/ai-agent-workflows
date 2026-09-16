@@ -50,43 +50,49 @@ function getPackageJsonOverlay(preset: string, stackKey: string): PackageJsonOve
 
 /**
  * Nigel React preset: TanStack Query + Zustand + Tailwind + Vitest + Playwright
+ * 
+ * Note: SvelteKit scaffold already includes Skeleton + Tailwind 4 + Vitest + Playwright,
+ * so we ONLY add TanStack Svelte Query without any devDependencies.
  */
 function getNigelReactOverlay(stackKey: string): PackageJsonOverlay {
-  const overlay: PackageJsonOverlay = {
-    dependencies: {
-      '@tanstack/react-query': '^5.0.0',
-    },
-    devDependencies: {
-      'tailwindcss': '^3.4.0',
-      'postcss': '^8.4.0',
-      'autoprefixer': '^10.4.0',
-      'vitest': '^1.0.0',
-      '@vitest/ui': '^1.0.0',
-      'playwright': '^1.40.0',
-      '@playwright/test': '^1.40.0',
-    },
-  };
-
   if (stackKey === 'nextjs') {
-    overlay.dependencies = {
-      ...overlay.dependencies,
-      'zustand': '^4.5.0',
+    return {
+      dependencies: {
+        '@tanstack/react-query': '^5.0.0',
+        'zustand': '^4.5.0',
+      },
+      devDependencies: {
+        'tailwindcss': '^3.4.0',
+        'postcss': '^8.4.0',
+        'autoprefixer': '^10.4.0',
+        'vitest': '^1.0.0',
+        '@vitest/ui': '^1.0.0',
+        'playwright': '^1.40.0',
+        '@playwright/test': '^1.40.0',
+      },
     };
   } else if (stackKey === 'sveltekit') {
-    // SvelteKit uses built-in stores, TanStack Query already added
-    overlay.dependencies = {
-      ...overlay.dependencies,
-      '@tanstack/svelte-query': '^5.0.0',
+    // SvelteKit scaffold already has Skeleton + Tailwind 4 + Vitest + Playwright
+    // ONLY add TanStack Svelte Query - NO devDependencies overlay
+    return {
+      dependencies: {
+        '@tanstack/svelte-query': '^5.0.0',
+      },
+      devDependencies: {},
     };
-    // Remove React Query for SvelteKit
-    delete overlay.dependencies['@tanstack/react-query'];
   }
 
-  return overlay;
+  return {
+    dependencies: {},
+    devDependencies: {},
+  };
 }
 
 /**
  * Generate preset-specific config files (e.g., tailwind.config.js, vitest.config.ts).
+ * 
+ * Note: For SvelteKit, scaffold already provides all configs, so we return empty map.
+ * Caller is responsible for checking if files exist before writing.
  */
 export function generatePresetConfigFiles(
   preset: string,
@@ -95,7 +101,8 @@ export function generatePresetConfigFiles(
 ): Map<string, string> {
   const files = new Map<string, string>();
 
-  if (preset === 'nigel-react') {
+  if (preset === 'nigel-react' && stackKey === 'nextjs') {
+    // Only generate config files for Next.js - SvelteKit scaffold has them
     files.set('tailwind.config.js', generateTailwindConfig(stackKey));
     files.set('postcss.config.js', generatePostcssConfig());
     files.set('vitest.config.ts', generateVitestConfig(stackKey));
