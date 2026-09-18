@@ -309,6 +309,93 @@ describe('materializeProject', () => {
     assert.ok(cursorRules.includes('Zustand'));
   });
 
+  it('should mark required conventions for Next.js', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-required-conventions',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-required-conventions'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const cursorRules = fs.readFileSync(path.join(ctx.outputPath, '.cursor', 'rules'), 'utf8');
+    assert.ok(cursorRules.includes('State Management (REQUIRED)'));
+    assert.ok(cursorRules.includes('Styling (REQUIRED)'));
+    assert.ok(cursorRules.includes('Testing (REQUIRED)'));
+    assert.ok(cursorRules.includes('Logging (REQUIRED)'));
+    assert.ok(cursorRules.includes('Convention Requirements'));
+
+    const conventionsMd = fs.readFileSync(path.join(ctx.outputPath, 'docs', 'conventions.md'), 'utf8');
+    assert.ok(conventionsMd.includes('State Management Patterns (REQUIRED)'));
+    assert.ok(conventionsMd.includes('Styling Conventions (REQUIRED)'));
+    assert.ok(conventionsMd.includes('Logging Conventions (REQUIRED)'));
+    assert.ok(conventionsMd.includes('Testing Conventions (REQUIRED)'));
+  });
+
+  it('should include styling conventions for Next.js', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-styling',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-styling'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const cursorRules = fs.readFileSync(path.join(ctx.outputPath, '.cursor', 'rules'), 'utf8');
+    assert.ok(cursorRules.includes('Tailwind CSS'));
+
+    const conventionsMd = fs.readFileSync(path.join(ctx.outputPath, 'docs', 'conventions.md'), 'utf8');
+    assert.ok(conventionsMd.includes('Tailwind CSS'));
+    assert.ok(conventionsMd.includes('tailwind.config.ts'));
+
+    const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
+    assert.ok(agentsMd.includes('Styling: Tailwind CSS'));
+  });
+
+  it('should include logging conventions for Next.js', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-logging',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-logging'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const cursorRules = fs.readFileSync(path.join(ctx.outputPath, '.cursor', 'rules'), 'utf8');
+    assert.ok(cursorRules.includes('Logging (REQUIRED)'));
+    assert.ok(cursorRules.includes('correlation IDs'));
+
+    const conventionsMd = fs.readFileSync(path.join(ctx.outputPath, 'docs', 'conventions.md'), 'utf8');
+    assert.ok(conventionsMd.includes('Logging Conventions (REQUIRED)'));
+  });
+
+  it('should use skill families from template spec', async () => {
+    const ctx: CreateContext = {
+      archetype: 'frontend',
+      projectName: 'test-skill-families',
+      outputPath: path.join(TEST_OUTPUT_DIR, 'test-skill-families'),
+      frontendStack: 'nextjs',
+      skipSkills: true,
+      repoRoot,
+    };
+
+    await materializeProject(ctx);
+
+    const agentsMd = fs.readFileSync(path.join(ctx.outputPath, 'AGENTS.md'), 'utf8');
+    assert.ok(agentsMd.includes('impl-frontend'));
+    assert.ok(agentsMd.includes('test-frontend-unit'));
+    assert.ok(agentsMd.includes('test-e2e'));
+  });
+
   it('should generate Python requirements.txt for Python backend (not React)', async () => {
     const ctx: CreateContext = {
       archetype: 'backend',

@@ -15,6 +15,27 @@ state_management:
     - Keep server state in query cache
     - Keep UI state in feature-local Zustand stores
 
+styling:
+  framework: Tailwind CSS
+  config: tailwind.config.ts
+  guidance:
+    - Use Tailwind utility classes for styling
+    - Component-level CSS modules only when Tailwind is insufficient
+    - Keep design tokens in Tailwind config
+
+logging:
+  client: console with structured context
+  guidance:
+    - Use correlation IDs for all client-side errors
+    - Log user actions for audit trail
+    - No PII in client logs
+
+required_conventions:
+  state_management: required
+  styling: required
+  testing: required
+  logging: required
+
 required_capabilities:
   - CAP-FF-001
   - CAP-FF-002
@@ -23,6 +44,11 @@ required_capabilities:
   - CAP-ADM-001
   - CAP-OBS-001
   - CAP-SEC-001
+
+skill_families:
+  - impl-frontend
+  - test-frontend-unit
+  - test-e2e
 
 required_routes:
   - /reports

@@ -50,6 +50,23 @@ export interface TemplateVariables {
     formState: string;
   };
   preset?: PresetOverride;
+  styling?: {
+    framework: string;
+    config: string;
+    guidance?: string[];
+  };
+  logging?: {
+    client?: string;
+    logger?: string;
+    guidance?: string[];
+  };
+  requiredConventions?: {
+    state_management?: string;
+    styling?: string;
+    testing?: string;
+    logging?: string;
+  };
+  skillFamilies?: string[];
   requiredCapabilities: string[];
   requiredRoutes: string[];
   requiredIntegrations: string[];
@@ -94,6 +111,30 @@ export function buildTemplateVariables(resolved: ResolvedContext): TemplateVaria
       clientState: spec.state_management.client_state,
       formState: spec.state_management.form_state,
     };
+  }
+
+  if (spec.styling) {
+    variables.styling = {
+      framework: spec.styling.framework,
+      config: spec.styling.config,
+      guidance: spec.styling.guidance,
+    };
+  }
+
+  if (spec.logging) {
+    variables.logging = {
+      client: spec.logging.client,
+      logger: spec.logging.logger,
+      guidance: spec.logging.guidance,
+    };
+  }
+
+  if (spec.required_conventions) {
+    variables.requiredConventions = spec.required_conventions;
+  }
+
+  if (spec.skill_families) {
+    variables.skillFamilies = spec.skill_families;
   }
 
   if (spec.testing_starter?.unit) {

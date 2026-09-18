@@ -99,6 +99,27 @@ ai-agent-pack-install create <archetype> <name> [options]
 
 **What it does:** Creates a complete project directory with source code, tests, configuration, and generated standards artifacts (`AGENTS.md`, `.cursor/rules`, conventions).
 
+### Generated Standards Artifacts
+
+Create mode generates three **authoritative** project-local standards artifacts that AI agents use as the source of truth for stack conventions:
+
+1. **`AGENTS.md`** - Defines the agent roles, handoffs, and recommended skill families for the project
+   - Driven by template-spec.yaml data
+   - Agents should consult this before starting work
+   - Skills listed here are workspace-installable recommendations
+
+2. **`.cursor/rules`** - Project-specific Cursor IDE rules encoding stack conventions
+   - Marks **REQUIRED** vs optional conventions (state management, styling, testing, logging)
+   - For Next.js/React stacks: enforces TanStack Query + Zustand + Tailwind CSS + structured logging
+   - Template version traceable to source template-spec.yaml
+
+3. **`docs/conventions.md`** - Human-readable engineering conventions document
+   - Expanded version of .cursor/rules for onboarding and reference
+   - Includes project structure, testing patterns, and code style guidelines
+   - Also marks REQUIRED conventions
+
+**Key principle:** These artifacts are generated from `template-spec.yaml` data, not hardcoded strings. When conventions are marked REQUIRED, they must not be changed without template version bump and team approval.
+
 ## Create Mode Examples
 
 ### Frontend Projects
