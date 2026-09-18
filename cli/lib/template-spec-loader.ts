@@ -18,6 +18,25 @@ export interface StateManagementConfig {
   guidance?: string[];
 }
 
+export interface StylingConfig {
+  framework: string;
+  config: string;
+  guidance?: string[];
+}
+
+export interface LoggingConfig {
+  client?: string;
+  logger?: string;
+  guidance?: string[];
+}
+
+export interface RequiredConventions {
+  state_management?: string;
+  styling?: string;
+  testing?: string;
+  logging?: string;
+}
+
 export interface CiCommandContract {
   stack_key: string;
   slots: Record<string, string>;
@@ -43,6 +62,10 @@ export interface TemplateSpec {
   purpose: string;
   framework: FrameworkConfig;
   state_management?: StateManagementConfig;
+  styling?: StylingConfig;
+  logging?: LoggingConfig;
+  required_conventions?: RequiredConventions;
+  skill_families?: string[];
   implementation_guidance?: Record<string, string>;
   required_capabilities: string[];
   required_routes?: string[];

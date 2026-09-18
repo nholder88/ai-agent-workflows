@@ -57,6 +57,11 @@ required_modules:
   - ReportingModule
   - AdminModule
 
+skill_families:
+  - impl-backend
+  - test-backend-unit
+  - test-integration
+
 security_baseline:
   authentication:
     - JWT validation via issuer/audience/jwks

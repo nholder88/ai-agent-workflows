@@ -18,6 +18,11 @@ required_capabilities:
   - CAP-DATA-001
   - CAP-OPS-001
 
+skill_families:
+  - impl-backend
+  - test-backend-unit
+  - test-integration
+
 implementation_guidance:
   logging: structlog + uvicorn access logs
   auth: JWT validation dependency + role guards
