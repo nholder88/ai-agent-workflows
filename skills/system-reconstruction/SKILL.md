@@ -3,8 +3,8 @@ name: system-reconstruction
 description: >-
   Reverse engineer an existing codebase into a complete, reconstruction-ready
   specification. Produces stable artifacts: system overview, architecture,
-  features and rules, APIs, data model, diagrams, environment/config,
-  technology analysis, improvements, and assumptions.
+  features and rules, APIs, data model, ontology (after domain/data-model work),
+  diagrams, environment/config, technology analysis, improvements, and assumptions.
   USE FOR: understanding unfamiliar codebases, producing system documentation,
   reconstruction-ready specs for legacy systems.
   DO NOT USE FOR: implementation (use impl-* skills), architecture planning
@@ -22,6 +22,7 @@ phase-family: discovery
 - A repo needs onboarding material or a rebuild-ready specification.
 - Planning must be grounded in the current implementation rather than assumptions.
 - Auditing a system, creating a handoff spec, or understanding an unfamiliar codebase.
+- Producing an ontology for domain language precision (after domain/data-model work; new project or reconstruction).
 
 ## When Not to Use
 
@@ -71,6 +72,15 @@ phase-family: discovery
 - Document data access patterns (ORM, raw queries, repository pattern).
 - Check for migrations, seeds, and data lifecycle.
 
+### Phase 5b: Ontology Construction (After Domain/Data-Model)
+
+- Extract canonical entities from the data model and domain logic.
+- Map relationships between entities with directionality and cardinality.
+- Document entity properties and lifecycle states.
+- Identify synonym drift: terms that mean the same thing but use different names.
+- List forbidden terms: deprecated or ambiguous terms that should not be used.
+- Cross-reference to system overview domain glossary and data model.
+
 ### Phase 6: Flow and Diagram Construction
 
 - Build Mermaid architecture diagrams from component relationships.
@@ -112,6 +122,7 @@ Use the numbered naming convention for predictable ordering. Files reference eac
 | `03-features-and-rules.md` | Every feature and business rule described as behavior |
 | `04-api-and-interfaces.md` | All API contracts, endpoints, integrations |
 | `05-data-model.md` | Every entity, field, relationship, ER diagrams |
+| `05b-ontology.md` | Domain entities, relationships, synonym/forbidden-term guidance |
 | `06-diagrams-and-flows.md` | User flows, data flows, sequence diagrams, state machines |
 | `07-environment-and-config.md` | Environment variables, config, deployment topology |
 | `08-technology-analysis.md` | Tech stack and how it shapes the design |
@@ -120,11 +131,12 @@ Use the numbered naming convention for predictable ordering. Files reference eac
 
 ### Artifact Content Requirements
 
-- **01-system-overview.md** — Purpose, user personas, domain glossary, system boundaries, key workflows. Written so a non-technical stakeholder could understand the entire system.
+- **01-system-overview.md** — Purpose, user personas, domain glossary, system boundaries, key workflows. Written so a non-technical stakeholder could understand the entire system. Links to `05b-ontology.md` for canonical domain language.
 - **02-architecture.md** — Architecture style, component inventory, dependency graph, communication patterns, entry points, architecture diagram.
 - **03-features-and-rules.md** — Feature catalog (every user-facing feature as behavior), business rules, authorization rules, state machines, computed values. For each feature: trigger, inputs/validation, processing logic, outputs/side effects, error conditions.
 - **04-api-and-interfaces.md** — API endpoints, WebSocket events, CLI commands, third-party integrations, authentication, error format, pagination.
-- **05-data-model.md** — Entity catalog (all fields, types, constraints, defaults), relationships with cardinality, ER diagram, storage, access patterns, migrations, data lifecycle.
+- **05-data-model.md** — Entity catalog (all fields, types, constraints, defaults), relationships with cardinality, ER diagram, storage, access patterns, migrations, data lifecycle. Links to `05b-ontology.md` for domain language guidance.
+- **05b-ontology.md** — Canonical domain entities with properties and lifecycle states, relationships between entities with directionality and cardinality, synonym guidance (terms that mean the same thing), forbidden terms (deprecated or ambiguous terms to avoid), cross-references to system overview domain glossary and data model. Produced after domain/data-model work in new projects or reconstructions.
 - **06-diagrams-and-flows.md** — All diagrams in Mermaid syntax: architecture, user flows, data flows, sequence diagrams, state machines.
 - **07-environment-and-config.md** — Environment variables, configuration files, build commands, deployment topology, external dependencies, secrets management.
 - **08-technology-analysis.md** — Languages/frameworks with versions, build tools, key dependencies and roles, architecture impact, version currency, constraints, idiomatic patterns.
@@ -143,6 +155,9 @@ Before presenting the spec, verify:
 
 - [ ] Every user-facing feature is documented in `03-features-and-rules.md`.
 - [ ] Every entity/model is cataloged in `05-data-model.md`.
+- [ ] Domain ontology is documented in `05b-ontology.md` with entities, relationships, and synonym/forbidden-term guidance.
+- [ ] System overview (`01-system-overview.md`) links to the ontology for canonical domain language.
+- [ ] Data model (`05-data-model.md`) links to the ontology for domain language guidance.
 - [ ] Every API endpoint is listed in `04-api-and-interfaces.md`.
 - [ ] Every environment variable is documented in `07-environment-and-config.md`.
 - [ ] All Mermaid diagrams use valid syntax and render correctly.
@@ -171,7 +186,7 @@ All skills in the **discovery** phase family use this identical report. Present 
 **Spec location:** [root path of generated spec, e.g. `docs/system-spec/`]
 
 **Artifacts produced**
-- [List of spec files generated, e.g. 01-system-overview.md, 02-architecture.md, ...]
+- [List of spec files generated, e.g. 01-system-overview.md, 02-architecture.md, ..., 05b-ontology.md]
 
 **Verified vs inferred**
 - Verified from code: [short bullet list]
