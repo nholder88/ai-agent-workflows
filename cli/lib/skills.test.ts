@@ -44,12 +44,12 @@ describe('parseAgentSkillMap', () => {
     const content = `
 | Source agent | Extracted skills |
 |---|---|
-| \`orchestrator\` | \`workflow-orchestration\` |
+| \`system-reverse-engineer\` | \`system-reconstruction\` |
 | \`architect-planner\` | \`architecture-backlog-planning\` |
 | \`python-implementer\` | \`implementation-from-spec\` |
 `;
     const map = parseAgentSkillMap(content);
-    assert.deepEqual(map.get('orchestrator'), ['workflow-orchestration']);
+    assert.deepEqual(map.get('system-reverse-engineer'), ['system-reconstruction']);
     assert.deepEqual(map.get('architect-planner'), ['architecture-backlog-planning']);
     assert.deepEqual(map.get('python-implementer'), ['implementation-from-spec']);
   });
@@ -73,18 +73,18 @@ describe('parseAgentSkillMap', () => {
 describe('getRequiredSkills', () => {
   it('returns skills required by selected agents', () => {
     const map = new Map([
-      ['orchestrator', ['workflow-orchestration']],
+      ['system-reverse-engineer', ['system-reconstruction']],
       ['architect-planner', ['architecture-backlog-planning']],
       ['python-implementer', ['implementation-from-spec']],
     ]);
-    const required = getRequiredSkills(['orchestrator.agent.md', 'python-implementer.agent.md'], map);
-    assert.ok(required.has('workflow-orchestration'));
+    const required = getRequiredSkills(['system-reverse-engineer.agent.md', 'python-implementer.agent.md'], map);
+    assert.ok(required.has('system-reconstruction'));
     assert.ok(required.has('implementation-from-spec'));
     assert.ok(!required.has('architecture-backlog-planning'));
   });
 
   it('returns empty set when no agents match the map', () => {
-    const map = new Map([['orchestrator', ['workflow-orchestration']]]);
+    const map = new Map([['system-reverse-engineer', ['system-reconstruction']]]);
     const required = getRequiredSkills(['unknown-agent.agent.md'], map);
     assert.equal(required.size, 0);
   });
