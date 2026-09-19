@@ -258,6 +258,12 @@ Generated projects reference Hermes at runtime but never embed credentials or mo
 
 Projects now include real starter code with proper structure, not just empty directories. The preset system applies opinionated defaults (state management, styling, testing) and documents them in generated project-local artifacts.
 
+## Composition
+
+This Pack integrates with Matt skills (decide/plan/TDD) and optional Loop hosts. The default path is **context-first**: Pack builds project truth (system-reconstruction + ontologies), Matt decides on that context, Matt /tdd delivers implementation, and Pack gates review against standards and context.
+
+**Read:** [Design/composition.md](./Design/composition.md) for the full Composition index, stage ownership (Demarcation), and handoff points.
+
 ## Status
 
 **Current:** working - 95% complete
