@@ -20,7 +20,7 @@ Pack builds project truth first (or on demand): the system-reconstruction eleven
 ## Core Contracts
 
 - **[Demarcation](./composition-demarcation.md)**: Stage ownership table (context-first), named handoffs, TDD delivery method, Caveman (Loop-host only), orchestrator role, and links to research
-- **Loop-host Seam contract**: (Pending — issue #40) Context-pack invoke fields, usage records, and integration requirements for Loop hosts plugging into the Pack
+- **[Loop-host Seam contract](./composition-seam.md)**: Context-pack invoke fields, usage records, and integration requirements for Loop hosts plugging into the Pack
 
 ## Handoff Cheat-Sheet
 
