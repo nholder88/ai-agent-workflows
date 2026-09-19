@@ -27,7 +27,7 @@ phase-family: implementation
 - You already know the correct specialist -- call `impl-nextjs`, `impl-sveltekit`, `impl-angular`, `impl-typescript-frontend`, `impl-typescript-backend`, `impl-python`, or another `impl-*` skill directly.
 - Architecture or design decisions are needed first -- use `architecture-planning`.
 - Requirements are vague -- use `requirements-clarification`.
-- Multi-stage pipeline orchestration is needed -- use `workflow-orchestration`.
+- Multi-stage pipeline orchestration is needed -- invoke the `orchestrator` agent.
 
 ## Procedure
 
@@ -131,6 +131,6 @@ _Use `N/A -- [reason]` if no formal AC list exists._
 - Do not implement directly when a clear specialist path exists. This skill is for routing and coordination only.
 - Do not send backend runtime work to a frontend skill or vice versa.
 - Do not skip framework detection -- always check `package.json` before choosing a generic path.
-- If the task also needs planning gates, multi-phase coordination, or assumption review before routing is meaningful, use `workflow-orchestration` first.
+- If the task also needs planning gates, multi-phase coordination, or assumption review before routing is meaningful, invoke the `orchestrator` agent first.
 - Use `requirements-clarification` when acceptance criteria are ambiguous.
 - Use `architecture-planning` when design, boundaries, or sequencing are missing.
