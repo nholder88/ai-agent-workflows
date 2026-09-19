@@ -87,7 +87,7 @@ The Pack orchestrator remains the Pack delivery controller for post-ready-for-ag
 ## Links to Research and Decisions
 
 - **Spine research** (Matt vs Pack comparison): To be linked when Design/research-spine-matt-vs-pack.md exists or research branch is merged
-- **Loop-host Seam contract**: (Pending — issue #40)
+- **Loop-host Seam contract**: [Loop-host Seam contract](./composition-seam.md)
 - **Map decisions**: [Compose Pack + Matt skills + loop-host seams](https://github.com/nholder88/ai-agent-workflows/issues/14)
 - **Context-first revision**: [Revise Demarcation: Pack context-first before Matt decide](https://github.com/nholder88/ai-agent-workflows/issues/37)
 
